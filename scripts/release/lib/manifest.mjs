@@ -41,6 +41,7 @@ const presentationAssetExtensions = new Set([
   ".webp"
 ]);
 const binaryNamePattern = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
+const discoverySearchPathPattern = /^[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/u;
 const permissionSemantics = new Set([
   "read-only",
   "ask-before-write",
@@ -359,12 +360,29 @@ function validateProfileShape(kind, profile) {
       const label = `discovery.candidates[${index}]`;
       rejectObjectKeys(
         candidate,
-        ["binaryNames", "version", "launchArgs", "probe"],
+        ["binaryNames", "searchPaths", "version", "launchArgs", "probe"],
         label
       );
       validateStringArray(candidate.binaryNames, `${label}.binaryNames`, true);
       if (candidate.binaryNames.some((name) => !binaryNamePattern.test(name))) {
         throw new Error(`${label}.binaryNames contains an invalid binary name`);
+      }
+      const searchPaths = candidate.searchPaths ?? [];
+      if (!Array.isArray(searchPaths) || searchPaths.length > 16) {
+        throw new Error(`${label}.searchPaths must contain at most 16 entries`);
+      }
+      for (const [pathIndex, searchPath] of searchPaths.entries()) {
+        const pathLabel = `${label}.searchPaths[${pathIndex}]`;
+        rejectObjectKeys(searchPath, ["scope", "path"], pathLabel);
+        const relativePath = requireString(searchPath.path, `${pathLabel}.path`);
+        if (
+          searchPath.scope !== "user" ||
+          relativePath.length > 256 ||
+          !discoverySearchPathPattern.test(relativePath) ||
+          relativePath.split("/").some((part) => part === "." || part === "..")
+        ) {
+          throw new Error(`${pathLabel} must be a safe user-relative search path`);
+        }
       }
       rejectObjectKeys(
         candidate?.version,

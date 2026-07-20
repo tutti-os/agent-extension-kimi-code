@@ -30,6 +30,9 @@ EXACT_UV_PACKAGE = re.compile(
     r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:[A-Za-z0-9._+-]*)?$"
 )
 BINARY_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+DISCOVERY_SEARCH_PATH = re.compile(
+    r"^[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*$"
+)
 PRESENTATION_ASSET_LIMIT = 256 << 10
 ALLOWED_PACKAGE_EXTENSIONS = {
     ".json",
@@ -255,7 +258,7 @@ def validate_discovery_profile(profile: dict[str, Any]) -> None:
             raise ValidationError(f"{field} must be an object")
         reject_unknown_keys(
             candidate,
-            {"binaryNames", "version", "launchArgs", "probe"},
+            {"binaryNames", "searchPaths", "version", "launchArgs", "probe"},
             field,
         )
         binaries = require_string_array(
@@ -265,6 +268,24 @@ def validate_discovery_profile(profile: dict[str, Any]) -> None:
             raise ValidationError(
                 f"{field}.binaryNames contains an invalid binary name"
             )
+        search_paths = candidate.get("searchPaths", [])
+        if not isinstance(search_paths, list) or len(search_paths) > 16:
+            raise ValidationError(f"{field}.searchPaths must contain at most 16 entries")
+        for path_index, search_path in enumerate(search_paths):
+            path_field = f"{field}.searchPaths[{path_index}]"
+            if not isinstance(search_path, dict):
+                raise ValidationError(f"{path_field} must be an object")
+            reject_unknown_keys(search_path, {"scope", "path"}, path_field)
+            relative_path = require_string(search_path.get("path"), f"{path_field}.path")
+            if (
+                search_path.get("scope") != "user"
+                or len(relative_path) > 256
+                or not DISCOVERY_SEARCH_PATH.fullmatch(relative_path)
+                or any(part in {".", ".."} for part in relative_path.split("/"))
+            ):
+                raise ValidationError(
+                    f"{path_field} must be a safe user-relative search path"
+                )
         version = candidate.get("version")
         if not isinstance(version, dict):
             raise ValidationError(f"{field}.version must be an object")

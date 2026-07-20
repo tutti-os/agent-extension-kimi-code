@@ -3,7 +3,7 @@
   "declared": {
     "imageInput": true,
     "audioInput": false,
-    "embeddedContext": false,
+    "embeddedContext": true,
     "interrupt": true,
     "resume": true,
     "permissionModes": true,

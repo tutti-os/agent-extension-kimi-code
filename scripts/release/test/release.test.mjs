@@ -94,7 +94,7 @@ test("signs and verifies the actual packaged Kimi Code extension", async () => {
     packageDir,
     outputDir: path.join(root, "out"),
     baseUrl: "https://d1x7gb6wqsqmnm.cloudfront.net/tutti-agent-releases",
-    version: "1.0.0",
+    version: "1.0.1",
     signingKeyId: "tutti-kimi-code-release-v1",
     privateKey: keys.privateKey,
     publishedAt: "2026-07-17T00:00:00Z",
@@ -236,6 +236,20 @@ test("both validators enforce discovery and safe Skill roots", async () => {
   discovery.candidates[0].probe.timeoutMs = 5000;
   await writeFile(discoveryPath, `${JSON.stringify(discovery, null, 2)}\n`);
   await assertBothValidatorsReject(packageDir, /safe relative POSIX path/u);
+});
+
+test("both validators enforce safe user-relative discovery search paths", async () => {
+  const packageDir = await repositoryFixture();
+  const discoveryPath = path.join(packageDir, "profiles", "discovery.json");
+  const discovery = JSON.parse(await readFile(discoveryPath, "utf8"));
+
+  discovery.candidates[0].searchPaths[0].path = "../bin";
+  await writeFile(discoveryPath, `${JSON.stringify(discovery, null, 2)}\n`);
+  await assertBothValidatorsReject(packageDir, /safe user-relative search path/u);
+
+  discovery.candidates[0].searchPaths[0] = { scope: "system", path: "usr/local/bin" };
+  await writeFile(discoveryPath, `${JSON.stringify(discovery, null, 2)}\n`);
+  await assertBothValidatorsReject(packageDir, /safe user-relative search path/u);
 });
 
 test("rejects files not declared by the manifest", async () => {

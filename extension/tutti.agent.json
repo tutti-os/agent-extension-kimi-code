@@ -1,7 +1,7 @@
 {
   "schemaVersion": "tutti.agent.manifest.v2",
   "agentKey": "kimi-code",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "name": "Kimi Code",
   "description": "Kimi Code through the standard Agent Client Protocol",
   "icon": { "type": "asset", "src": "assets/icon.png" },
@@ -10,11 +10,11 @@
   "runtime": {
     "kind": "standard-acp",
     "install": {
-      "runner": "uv",
-      "args": ["tool", "install", "kimi-cli==1.49.0"]
+      "runner": "npm",
+      "args": ["install", "--prefix", "${installRoot}", "@moonshot-ai/kimi-code@0.28.0"]
     },
     "launch": {
-      "executable": "${installRoot}/bin/kimi",
+      "executable": "${installRoot}/node_modules/.bin/kimi",
       "args": ["acp"]
     }
   },

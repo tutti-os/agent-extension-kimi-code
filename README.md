@@ -5,12 +5,18 @@ Agent Client Protocol (ACP). The signed package is declarative: it contains
 metadata, profiles, localized copy, and passive images, but no executable
 extension code.
 
+The contract follows the official
+[Kimi Code CLI getting-started guide](https://www.kimi.com/code/docs/en/kimi-code-cli/guides/getting-started.html)
+and the upstream
+[`MoonshotAI/kimi-code`](https://github.com/MoonshotAI/kimi-code) repository.
+
 ## Runtime contract
 
-- PyPI requirement: `kimi-cli==1.49.0`
+- npm package: `@moonshot-ai/kimi-code@0.28.0`
 - Discovery: `kimi --version`
+- Official installer location: `~/.kimi-code/bin`
 - ACP launch: `kimi acp`
-- Managed install: isolated `uv tool install` under the Target runtime root
+- Managed install: isolated `npm install --prefix` under the Target runtime root
 
 Models and permission modes are projected from the live ACP session. The
 signed profile maps `plan`, `default`, `auto`, and `yolo` to Tutti's semantic
@@ -28,5 +34,5 @@ Release publication uses Ed25519 signatures, immutable version objects, and
 the shared Tutti Agent Extension CDN. The production private key is stored only
 as the `TUTTI_AGENT_EXTENSION_SIGNING_PRIVATE_KEY` repository secret.
 
-Kimi CLI remains an upstream Moonshot AI project; this repository owns only
+Kimi Code CLI remains an upstream Moonshot AI project; this repository owns only
 Tutti's declarative integration metadata and release pipeline.
