@@ -15,6 +15,19 @@ command name is `/skill:<name>`. The repository check starts the pinned runtime,
 creates a canonical `SKILL.md`, and requires `available_commands_update` to
 contain `skill:tutti-canonical-test`.
 
-Release `1.0.2` requires Tutti `0.2.3-rc.14` or newer because older hosts do
-not accept provider-native compound Skill trigger prefixes such as `/skill:`.
-The workflow default must not be lowered when publishing this package.
+Release `1.0.3` also declares the host-managed `browserUse` capability. Tutti
+still gates the effective capability on its own browser availability and
+injects the browser tools at launch; the Kimi ACP runtime does not need to
+advertise a provider-native browser command.
+
+The same release declares an authoritative slash-command projection containing
+only `compact`, `status`, `usage`, `mcp`, `tasks`, and `help`. Tutti intersects
+that list with live ACP commands, preserving runtime descriptions. Unlisted
+runtime commands are projected through the typed Skill catalog with their exact
+slash triggers, producing separate Command, Capability, and Skill groups in the
+composer.
+
+Release `1.0.3` requires Tutti `0.2.3-rc.14` or newer because older hosts do
+not accept provider-native compound Skill trigger prefixes such as `/skill:`
+or project host-managed extension capabilities into the composer. The workflow
+default must not be lowered when publishing this package.

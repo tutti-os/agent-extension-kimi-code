@@ -4,6 +4,7 @@
     "imageInput": true,
     "audioInput": false,
     "embeddedContext": true,
+    "browserUse": true,
     "interrupt": true,
     "resume": true,
     "permissionModes": true,

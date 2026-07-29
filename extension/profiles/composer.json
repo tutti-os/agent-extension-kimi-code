@@ -8,9 +8,21 @@
     { "runtimeId": "auto", "semantic": "accept-edits" },
     { "runtimeId": "yolo", "semantic": "full-access" }
   ],
+  "slashCommands": {
+    "commandCatalogAuthoritative": true,
+    "commands": [
+      { "name": "compact", "effect": "submitImmediate" },
+      { "name": "status", "effect": "showStatus" },
+      { "name": "usage", "effect": "submitImmediate" },
+      { "name": "mcp", "effect": "submitImmediate" },
+      { "name": "tasks", "effect": "submitImmediate" },
+      { "name": "help", "effect": "submitImmediate" }
+    ]
+  },
   "skills": {
     "invocation": "textTrigger",
     "triggerPrefix": "/skill:",
+    "runtimeCommandProjection": "unlisted-as-skills",
     "roots": [{ "scope": "workspace", "path": ".agents/skills" }]
   }
 }

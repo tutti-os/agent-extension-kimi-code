@@ -1,7 +1,7 @@
 {
   "schemaVersion": "tutti.agent.manifest.v2",
   "agentKey": "kimi-code",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "name": "Kimi Code",
   "description": "Kimi Code through the standard Agent Client Protocol",
   "icon": { "type": "asset", "src": "assets/icon.png" },
