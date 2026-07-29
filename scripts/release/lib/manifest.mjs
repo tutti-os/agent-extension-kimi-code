@@ -42,6 +42,15 @@ const presentationAssetExtensions = new Set([
 ]);
 const binaryNamePattern = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
 const discoverySearchPathPattern = /^[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/u;
+const slashCommandNamePattern = /^[a-z0-9][a-z0-9._:-]{0,63}$/u;
+const slashCommandEffects = new Set([
+  "submitImmediate",
+  "showReviewPicker",
+  "activateGoalMode",
+  "togglePlanMode",
+  "showStatus",
+  "toggleSpeed"
+]);
 const permissionSemantics = new Set([
   "read-only",
   "ask-before-write",
@@ -54,6 +63,7 @@ const capabilityNames = [
   "imageInput",
   "audioInput",
   "embeddedContext",
+  "browserUse",
   "interrupt",
   "resume",
   "permissionModes",
@@ -477,7 +487,14 @@ function validateProfileShape(kind, profile) {
   if (kind === "composer") {
     rejectUnknownKeys(
       profile,
-      ["schemaVersion", "model", "permission", "permissionModes", "skills"],
+      [
+        "schemaVersion",
+        "model",
+        "permission",
+        "permissionModes",
+        "slashCommands",
+        "skills"
+      ],
       kind
     );
     rejectObjectKeys(profile.model, ["source"], "composer.model");
@@ -513,10 +530,54 @@ function validateProfileShape(kind, profile) {
         if (!safeApproval && !safeDenial) throw new Error(`${label}.automaticDecision is unsafe`);
       }
     }
+    if (profile.slashCommands !== undefined) {
+      rejectObjectKeys(
+        profile.slashCommands,
+        ["commandCatalogAuthoritative", "commands"],
+        "composer.slashCommands"
+      );
+      if (typeof profile.slashCommands.commandCatalogAuthoritative !== "boolean") {
+        throw new Error(
+          "composer.slashCommands.commandCatalogAuthoritative must be a boolean"
+        );
+      }
+      if (
+        !Array.isArray(profile.slashCommands.commands) ||
+        profile.slashCommands.commands.length === 0
+      ) {
+        throw new Error(
+          "composer.slashCommands.commands must be a non-empty array"
+        );
+      }
+      const commandNames = new Set();
+      for (const [index, command] of profile.slashCommands.commands.entries()) {
+        const label = `composer.slashCommands.commands[${index}]`;
+        rejectObjectKeys(command, ["name", "effect"], label);
+        const name = requireString(command.name, `${label}.name`).trim();
+        if (!slashCommandNamePattern.test(name)) {
+          throw new Error(`${label}.name is unsupported`);
+        }
+        if (commandNames.has(name)) {
+          throw new Error(`${label}.name must be unique`);
+        }
+        commandNames.add(name);
+        if (
+          command.effect !== undefined &&
+          !slashCommandEffects.has(command.effect)
+        ) {
+          throw new Error(`${label}.effect is unsupported`);
+        }
+      }
+    }
     if (profile.skills !== undefined) {
       rejectObjectKeys(
         profile.skills,
-        ["invocation", "triggerPrefix", "roots"],
+        [
+          "invocation",
+          "triggerPrefix",
+          "runtimeCommandProjection",
+          "roots"
+        ],
         "composer.skills"
       );
       if (profile.skills.invocation !== "textTrigger") {
@@ -528,6 +589,22 @@ function validateProfileShape(kind, profile) {
       );
       if (/\s/u.test(trigger) || trigger.length > 8) {
         throw new Error("composer.skills.triggerPrefix must be a short non-space prefix");
+      }
+      if (
+        profile.skills.runtimeCommandProjection !== undefined &&
+        profile.skills.runtimeCommandProjection !== "unlisted-as-skills"
+      ) {
+        throw new Error(
+          "composer.skills.runtimeCommandProjection is unsupported"
+        );
+      }
+      if (
+        profile.skills.runtimeCommandProjection === "unlisted-as-skills" &&
+        profile.slashCommands?.commandCatalogAuthoritative !== true
+      ) {
+        throw new Error(
+          "composer.skills.runtimeCommandProjection requires an authoritative slash command catalog"
+        );
       }
       if (!Array.isArray(profile.skills.roots) || profile.skills.roots.length === 0) {
         throw new Error("composer.skills.roots must be a non-empty array");

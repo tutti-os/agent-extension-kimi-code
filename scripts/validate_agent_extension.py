@@ -33,6 +33,15 @@ BINARY_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 DISCOVERY_SEARCH_PATH = re.compile(
     r"^[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*$"
 )
+SLASH_COMMAND_NAME = re.compile(r"^[a-z0-9][a-z0-9._:-]{0,63}$")
+SLASH_COMMAND_EFFECTS = {
+    "submitImmediate",
+    "showReviewPicker",
+    "activateGoalMode",
+    "togglePlanMode",
+    "showStatus",
+    "toggleSpeed",
+}
 PRESENTATION_ASSET_LIMIT = 256 << 10
 ALLOWED_PACKAGE_EXTENSIONS = {
     ".json",
@@ -56,6 +65,7 @@ CAPABILITY_NAMES = {
     "imageInput",
     "audioInput",
     "embeddedContext",
+    "browserUse",
     "interrupt",
     "resume",
     "permissionModes",
@@ -376,7 +386,14 @@ def validate_skill_root(root: Any, index: int) -> None:
 def validate_composer_profile(profile: dict[str, Any]) -> bool:
     reject_unknown_keys(
         profile,
-        {"schemaVersion", "model", "permission", "permissionModes", "skills"},
+        {
+            "schemaVersion",
+            "model",
+            "permission",
+            "permissionModes",
+            "slashCommands",
+            "skills",
+        },
         "composer",
     )
     model = profile.get("model")
@@ -410,13 +427,55 @@ def validate_composer_profile(profile: dict[str, Any]) -> bool:
         safe_denial = decision == "denied" and mode.get("semantic") == "read-only"
         if decision is not None and not safe_approval and not safe_denial:
             raise ValidationError(f"{field}.automaticDecision is unsafe")
+    slash_commands = profile.get("slashCommands")
+    if slash_commands is not None:
+        if not isinstance(slash_commands, dict):
+            raise ValidationError("composer.slashCommands must be an object")
+        reject_unknown_keys(
+            slash_commands,
+            {"commandCatalogAuthoritative", "commands"},
+            "composer.slashCommands",
+        )
+        if not isinstance(
+            slash_commands.get("commandCatalogAuthoritative"), bool
+        ):
+            raise ValidationError(
+                "composer.slashCommands.commandCatalogAuthoritative must be a boolean"
+            )
+        commands = slash_commands.get("commands")
+        if not isinstance(commands, list) or not commands:
+            raise ValidationError(
+                "composer.slashCommands.commands must be a non-empty array"
+            )
+        command_names: set[str] = set()
+        for index, command in enumerate(commands):
+            field = f"composer.slashCommands.commands[{index}]"
+            if not isinstance(command, dict):
+                raise ValidationError(f"{field} must be an object")
+            reject_unknown_keys(command, {"name", "effect"}, field)
+            name = require_string(command.get("name"), f"{field}.name").strip()
+            if not SLASH_COMMAND_NAME.fullmatch(name):
+                raise ValidationError(f"{field}.name is unsupported")
+            if name in command_names:
+                raise ValidationError(f"{field}.name must be unique")
+            command_names.add(name)
+            effect = command.get("effect")
+            if effect is not None and effect not in SLASH_COMMAND_EFFECTS:
+                raise ValidationError(f"{field}.effect is unsupported")
     skills = profile.get("skills")
     if skills is None:
         return False
     if not isinstance(skills, dict):
         raise ValidationError("composer.skills must be an object")
     reject_unknown_keys(
-        skills, {"invocation", "triggerPrefix", "roots"}, "composer.skills"
+        skills,
+        {
+            "invocation",
+            "triggerPrefix",
+            "runtimeCommandProjection",
+            "roots",
+        },
+        "composer.skills",
     )
     if skills.get("invocation") != "textTrigger":
         raise ValidationError("composer.skills.invocation must be textTrigger")
@@ -426,6 +485,22 @@ def validate_composer_profile(profile: dict[str, Any]) -> bool:
     if any(character.isspace() for character in trigger) or len(trigger) > 8:
         raise ValidationError(
             "composer.skills.triggerPrefix must be a short non-space prefix"
+        )
+    projection = skills.get("runtimeCommandProjection")
+    if projection is not None and projection != "unlisted-as-skills":
+        raise ValidationError(
+            "composer.skills.runtimeCommandProjection is unsupported"
+        )
+    slash_commands = profile.get("slashCommands")
+    if (
+        projection == "unlisted-as-skills"
+        and (
+            not isinstance(slash_commands, dict)
+            or slash_commands.get("commandCatalogAuthoritative") is not True
+        )
+    ):
+        raise ValidationError(
+            "composer.skills.runtimeCommandProjection requires an authoritative slash command catalog"
         )
     roots = skills.get("roots")
     if not isinstance(roots, list) or not roots:

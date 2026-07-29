@@ -6,7 +6,7 @@ const root = path.resolve(import.meta.dirname, '..');
 execFileSync(process.execPath, [path.join(root, 'scripts', 'package.mjs')], { stdio: 'inherit' });
 const packageDir = path.join(root, 'build', 'tutti-agent', 'package');
 const manifest = JSON.parse(await readFile(path.join(packageDir, 'tutti.agent.json'), 'utf8'));
-if (manifest.schemaVersion !== 'tutti.agent.manifest.v2' || manifest.agentKey !== 'kimi-code' || manifest.version !== '1.0.2') throw new Error('invalid manifest identity');
+if (manifest.schemaVersion !== 'tutti.agent.manifest.v2' || manifest.agentKey !== 'kimi-code' || manifest.version !== '1.0.3') throw new Error('invalid manifest identity');
 const expectedInstall = ['install', '--prefix', '${installRoot}', '@moonshot-ai/kimi-code@0.28.0'];
 if (manifest.runtime?.kind !== 'standard-acp' || manifest.runtime.install?.runner !== 'npm' || JSON.stringify(manifest.runtime.install.args) !== JSON.stringify(expectedInstall)) throw new Error('Kimi Code runtime must use the pinned, isolated npm contract');
 if (manifest.runtime.launch?.executable !== '${installRoot}/node_modules/.bin/kimi' || JSON.stringify(manifest.runtime.launch.args) !== JSON.stringify(['acp'])) throw new Error('Kimi Code managed launch contract changed');
@@ -17,12 +17,24 @@ if (JSON.stringify(candidate.searchPaths) !== JSON.stringify([{ scope: 'user', p
 if (JSON.stringify(candidate.version) !== JSON.stringify({ args: ['--version'], constraint: '>=0.28.0 <1.0.0' })) throw new Error('Kimi Code discovery version contract changed');
 if (JSON.stringify(candidate.launchArgs) !== JSON.stringify(['acp']) || candidate.probe?.kind !== 'acp-initialize' || candidate.probe.timeoutMs !== 15000) throw new Error('Kimi Code discovery must use the bounded ACP probe');
 const capabilities = JSON.parse(await readFile(path.join(packageDir, manifest.profiles.capabilities), 'utf8'));
-const expectedCapabilities = { imageInput: true, audioInput: false, embeddedContext: true, interrupt: true, resume: true, permissionModes: true, modelSelection: true, commands: true, skills: true };
+const expectedCapabilities = { imageInput: true, audioInput: false, embeddedContext: true, browserUse: true, interrupt: true, resume: true, permissionModes: true, modelSelection: true, commands: true, skills: true };
 if (JSON.stringify(capabilities.declared) !== JSON.stringify(expectedCapabilities)) throw new Error('Kimi Code capabilities changed without runtime evidence');
 const composer = JSON.parse(await readFile(path.join(packageDir, manifest.profiles.composer), 'utf8'));
 const expectedModes = [{ runtimeId: 'plan', semantic: 'read-only' }, { runtimeId: 'default', semantic: 'ask-before-write' }, { runtimeId: 'auto', semantic: 'accept-edits' }, { runtimeId: 'yolo', semantic: 'full-access' }];
 if (JSON.stringify(composer.permissionModes) !== JSON.stringify(expectedModes)) throw new Error('Kimi Code permission mappings changed');
-const expectedSkills = { invocation: 'textTrigger', triggerPrefix: '/skill:', roots: [{ scope: 'workspace', path: '.agents/skills' }] };
+const expectedSlashCommands = {
+  commandCatalogAuthoritative: true,
+  commands: [
+    { name: 'compact', effect: 'submitImmediate' },
+    { name: 'status', effect: 'showStatus' },
+    { name: 'usage', effect: 'submitImmediate' },
+    { name: 'mcp', effect: 'submitImmediate' },
+    { name: 'tasks', effect: 'submitImmediate' },
+    { name: 'help', effect: 'submitImmediate' }
+  ]
+};
+if (JSON.stringify(composer.slashCommands) !== JSON.stringify(expectedSlashCommands)) throw new Error('Kimi Code slash command catalog changed');
+const expectedSkills = { invocation: 'textTrigger', triggerPrefix: '/skill:', runtimeCommandProjection: 'unlisted-as-skills', roots: [{ scope: 'workspace', path: '.agents/skills' }] };
 if (JSON.stringify(composer.skills) !== JSON.stringify(expectedSkills)) throw new Error('Kimi Code Skill discovery contract changed');
 const tools = JSON.parse(await readFile(path.join(packageDir, manifest.profiles.tools), 'utf8'));
 if (tools.tools?.length !== 0) throw new Error('Kimi Code tools must remain generic');

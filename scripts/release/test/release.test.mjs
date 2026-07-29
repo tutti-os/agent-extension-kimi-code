@@ -94,10 +94,10 @@ test("signs and verifies the actual packaged Kimi Code extension", async () => {
     packageDir,
     outputDir: path.join(root, "out"),
     baseUrl: "https://d1x7gb6wqsqmnm.cloudfront.net/tutti-agent-releases",
-    version: "1.0.2",
+    version: "1.0.3",
     signingKeyId: "tutti-kimi-code-release-v1",
     privateKey: keys.privateKey,
-    publishedAt: "2026-07-17T00:00:00Z",
+    publishedAt: "2026-07-29T00:00:00Z",
     gitSha: "verification"
   });
   assert.equal(result.release.manifest.agentKey, "kimi-code");
@@ -160,11 +160,7 @@ test("rejects unsupported manifest fields in both validators", async () => {
   await assert.rejects(validatePackage(packageDir, "kimi-code"), /unsupported fields/u);
 
   const repositoryPackage = path.join(path.dirname(packageDir), "repository-package");
-  await cp(
-    path.resolve(import.meta.dirname, "../../../extension"),
-    repositoryPackage,
-    { recursive: true }
-  );
+  await copyRepositoryExtension(repositoryPackage);
   await mutateManifest(repositoryPackage, (manifest) => {
     manifest.runtime.shell = true;
   });
@@ -183,11 +179,7 @@ test("rejects unsupported manifest fields in both validators", async () => {
 test("rejects unsupported profile fields in both validators", async () => {
   const root = await temporaryRoot();
   const packageDir = path.join(root, "repository-package");
-  await cp(
-    path.resolve(import.meta.dirname, "../../../extension"),
-    packageDir,
-    { recursive: true }
-  );
+  await copyRepositoryExtension(packageDir);
   const composerPath = path.join(packageDir, "profiles", "composer.json");
   const composer = JSON.parse(await readFile(composerPath, "utf8"));
   composer.provider = "kimi-code";
@@ -204,6 +196,18 @@ test("rejects unsupported profile fields in both validators", async () => {
   );
   assert.notEqual(python.status, 0);
   assert.match(python.stderr, /unsupported fields/u);
+});
+
+test("both validators enforce runtime command Skill projection", async () => {
+  const packageDir = await repositoryFixture();
+  const composerPath = path.join(packageDir, "profiles", "composer.json");
+  const composer = JSON.parse(await readFile(composerPath, "utf8"));
+  composer.skills.runtimeCommandProjection = "unsupported";
+  await writeFile(composerPath, `${JSON.stringify(composer, null, 2)}\n`);
+  await assertBothValidatorsReject(
+    packageDir,
+    /runtimeCommandProjection is unsupported/u
+  );
 });
 
 test("both validators enforce capability names and boolean values", async () => {
@@ -345,12 +349,19 @@ test("both validators reject active and non-local SVG forms", async () => {
 async function repositoryFixture() {
   const root = await temporaryRoot();
   const packageDir = path.join(root, "repository-package");
+  await copyRepositoryExtension(packageDir);
+  return packageDir;
+}
+
+async function copyRepositoryExtension(packageDir) {
   await cp(
     path.resolve(import.meta.dirname, "../../../extension"),
     packageDir,
-    { recursive: true }
+    {
+      recursive: true,
+      filter: (source) => path.basename(source) !== ".DS_Store"
+    }
   );
-  return packageDir;
 }
 
 async function assertBothValidatorsReject(packageDir, pattern) {
