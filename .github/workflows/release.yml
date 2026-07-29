@@ -6,11 +6,11 @@ on:
       version:
         description: Immutable extension version
         required: true
-        default: "1.0.1"
+        default: "1.0.2"
       min_tutti_version:
         description: Oldest verified Tutti version that accepts this package contract
         required: true
-        default: "0.2.2-rc.7"
+        default: "0.2.3-rc.14"
       withdraw_versions:
         description: Comma-separated historical extension versions to mark withdrawn in versions.json
         required: false

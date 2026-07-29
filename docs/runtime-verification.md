@@ -8,9 +8,13 @@ must complete a standard ACP initialize probe within 15 seconds.
 
 The verified `0.28.0` ACP handshake advertises image and embedded-context
 prompt input, session resume/load, model and mode config options, and runtime
-commands. The extension keeps Skill roots undeclared because the runtime's
-user-local Skill inventory is not extension-owned metadata.
+commands. Kimi also discovers directory-form Skills from the project
+`.agents/skills` root during ACP session creation. The extension declares that
+workspace root so Tutti can materialize its canonical Skills there; the native
+command name is `/skill:<name>`. The repository check starts the pinned runtime,
+creates a canonical `SKILL.md`, and requires `available_commands_update` to
+contain `skill:tutti-canonical-test`.
 
-Release `1.0.1` requires Tutti `0.2.2-rc.7` or newer because older hosts
-strictly reject the new signed discovery field instead of ignoring it. The
-workflow default must not be lowered when publishing this package.
+Release `1.0.2` requires Tutti `0.2.3-rc.14` or newer because older hosts do
+not accept provider-native compound Skill trigger prefixes such as `/skill:`.
+The workflow default must not be lowered when publishing this package.
