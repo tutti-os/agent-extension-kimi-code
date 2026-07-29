@@ -94,7 +94,7 @@ test("signs and verifies the actual packaged Kimi Code extension", async () => {
     packageDir,
     outputDir: path.join(root, "out"),
     baseUrl: "https://d1x7gb6wqsqmnm.cloudfront.net/tutti-agent-releases",
-    version: "1.0.1",
+    version: "1.0.2",
     signingKeyId: "tutti-kimi-code-release-v1",
     privateKey: keys.privateKey,
     publishedAt: "2026-07-17T00:00:00Z",

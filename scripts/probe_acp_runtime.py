@@ -29,6 +29,34 @@ def parse_environment(values: list[str]) -> dict[str, str]:
     return result
 
 
+def available_command_names(
+    notifications: list[dict[str, Any]], session_id: str
+) -> set[str]:
+    names: set[str] = set()
+    for notification in notifications:
+        if notification.get("method") != "session/update":
+            continue
+        params = notification.get("params")
+        if not isinstance(params, dict) or params.get("sessionId") != session_id:
+            continue
+        update = params.get("update")
+        if (
+            not isinstance(update, dict)
+            or update.get("sessionUpdate") != "available_commands_update"
+        ):
+            continue
+        commands = update.get("availableCommands")
+        if not isinstance(commands, list):
+            continue
+        for command in commands:
+            if not isinstance(command, dict):
+                continue
+            name = command.get("name")
+            if isinstance(name, str) and name.strip():
+                names.add(name.strip())
+    return names
+
+
 class ACPProcess:
     def __init__(
         self, command: list[str], cwd: Path, env: dict[str, str], timeout: float
@@ -191,6 +219,20 @@ def main() -> int:
         default=3.0,
         help="seconds to collect asynchronous session notifications",
     )
+    parser.add_argument(
+        "--expect-command",
+        action="append",
+        default=[],
+        help=(
+            "require an ACP available_commands_update entry with this exact "
+            "command name; may be repeated"
+        ),
+    )
+    parser.add_argument(
+        "--summary-only",
+        action="store_true",
+        help="emit only the runtime version and verified command names",
+    )
     parser.add_argument("command", nargs=argparse.REMAINDER)
     args = parser.parse_args()
     command = args.command[1:] if args.command[:1] == ["--"] else args.command
@@ -245,7 +287,28 @@ def main() -> int:
                     },
                 )
             runtime.drain(args.notification_wait)
-        result["notifications"] = runtime.notifications
+            expected_commands = {
+                command.strip() for command in args.expect_command if command.strip()
+            }
+            if expected_commands:
+                discovered_commands = available_command_names(
+                    runtime.notifications, session["sessionId"]
+                )
+                missing_commands = sorted(expected_commands - discovered_commands)
+                if missing_commands:
+                    raise ProbeError(
+                        "ACP available_commands_update missing expected command(s): "
+                        + ", ".join(missing_commands)
+                    )
+                result["expectedCommands"] = sorted(expected_commands)
+        if args.summary_only:
+            result = {
+                "status": result["status"],
+                "agentVersion": initialize.get("agentInfo", {}).get("version"),
+                "expectedCommands": result.get("expectedCommands", []),
+            }
+        else:
+            result["notifications"] = runtime.notifications
         print(json.dumps(result, ensure_ascii=False))
         return 0
     except (OSError, ProbeError) as exc:

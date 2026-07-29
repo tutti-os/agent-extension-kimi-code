@@ -7,5 +7,10 @@
     { "runtimeId": "default", "semantic": "ask-before-write" },
     { "runtimeId": "auto", "semantic": "accept-edits" },
     { "runtimeId": "yolo", "semantic": "full-access" }
-  ]
+  ],
+  "skills": {
+    "invocation": "textTrigger",
+    "triggerPrefix": "/skill:",
+    "roots": [{ "scope": "workspace", "path": ".agents/skills" }]
+  }
 }

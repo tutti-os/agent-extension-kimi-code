@@ -9,6 +9,6 @@
     "permissionModes": true,
     "modelSelection": true,
     "commands": true,
-    "skills": false
+    "skills": true
   }
 }
