@@ -6,7 +6,7 @@ const root = path.resolve(import.meta.dirname, '..');
 execFileSync(process.execPath, [path.join(root, 'scripts', 'package.mjs')], { stdio: 'inherit' });
 const packageDir = path.join(root, 'build', 'tutti-agent', 'package');
 const manifest = JSON.parse(await readFile(path.join(packageDir, 'tutti.agent.json'), 'utf8'));
-if (manifest.schemaVersion !== 'tutti.agent.manifest.v2' || manifest.agentKey !== 'kimi-code' || manifest.version !== '1.0.3') throw new Error('invalid manifest identity');
+if (manifest.schemaVersion !== 'tutti.agent.manifest.v2' || manifest.agentKey !== 'kimi-code' || manifest.version !== '1.0.4') throw new Error('invalid manifest identity');
 const expectedInstall = ['install', '--prefix', '${installRoot}', '@moonshot-ai/kimi-code@0.28.0'];
 if (manifest.runtime?.kind !== 'standard-acp' || manifest.runtime.install?.runner !== 'npm' || JSON.stringify(manifest.runtime.install.args) !== JSON.stringify(expectedInstall)) throw new Error('Kimi Code runtime must use the pinned, isolated npm contract');
 if (manifest.runtime.launch?.executable !== '${installRoot}/node_modules/.bin/kimi' || JSON.stringify(manifest.runtime.launch.args) !== JSON.stringify(['acp'])) throw new Error('Kimi Code managed launch contract changed');
