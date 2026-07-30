@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "tutti.agent.authentication.v1",
+  "methods": [
+    {
+      "id": "login",
+      "type": "terminal",
+      "command": {
+        "strategy": "runtime-subcommand",
+        "args": ["login"]
+      }
+    }
+  ]
+}

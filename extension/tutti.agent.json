@@ -1,7 +1,7 @@
 {
   "schemaVersion": "tutti.agent.manifest.v2",
   "agentKey": "kimi-code",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "name": "Kimi Code",
   "description": "Kimi Code through the standard Agent Client Protocol",
   "icon": { "type": "asset", "src": "assets/icon.png" },
@@ -22,7 +22,8 @@
     "discovery": "profiles/discovery.json",
     "tools": "profiles/tools.json",
     "capabilities": "profiles/capabilities.json",
-    "composer": "profiles/composer.json"
+    "composer": "profiles/composer.json",
+    "authentication": "profiles/authentication.json"
   },
   "localizationInfo": {
     "defaultLocale": "en",

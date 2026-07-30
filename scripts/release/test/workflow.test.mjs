@@ -11,6 +11,15 @@ test("release workflow protects immutable and mutable objects", async () => {
     "utf8"
   );
   assert.match(workflow, /run: pnpm check/u);
+  assert.match(workflow, /default: "1\.0\.5"/u);
+  assert.match(
+    workflow,
+    /AGENT_METADATA_PATH: agents\/kimi-code\/authentication-v1/u
+  );
+  assert.match(
+    workflow,
+    /metadata_prefix="\$\{S3_PREFIX:\+\$\{S3_PREFIX\}\/\}\$\{AGENT_METADATA_PATH\}"/u
+  );
   assert.doesNotMatch(workflow, /uses:\s+[^\s#]+@v\d+/u);
   assert.match(workflow, /--published-at "\$\{published_at\}"/u);
   assert.match(workflow, /--git-sha "\$\{GITHUB_SHA\}"/u);
@@ -38,6 +47,8 @@ test("release workflow protects immutable and mutable objects", async () => {
   assert.match(publicVerification, /\/versions\.json/u);
   assert.match(publicVerification, /\/latest\.json/u);
   assert.match(publicVerification, /\/release\.json/u);
+  assert.match(publicVerification, /public_metadata_root/u);
+  assert.match(publicVerification, /public_release_root/u);
   assert.match(publicVerification, /verify-tutti-agent-extension-release\.mjs/u);
   assert.match(publicVerification, /--public-key-file/u);
   assert.match(publicVerification, /--package-dir build\/tutti-agent\/package/u);
