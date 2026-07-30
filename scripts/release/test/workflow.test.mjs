@@ -11,7 +11,14 @@ test("release workflow protects immutable and mutable objects", async () => {
     "utf8"
   );
   assert.match(workflow, /run: pnpm check/u);
-  assert.match(workflow, /default: "1\.0\.5"/u);
+  assert.match(
+    workflow,
+    /version:\s+description: Immutable extension version\s+required: true/u
+  );
+  assert.doesNotMatch(
+    workflow,
+    /version:\s+description: Immutable extension version\s+required: true\s+default:/u
+  );
   assert.match(
     workflow,
     /AGENT_METADATA_PATH: agents\/kimi-code\/authentication-v1/u

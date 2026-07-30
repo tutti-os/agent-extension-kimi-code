@@ -31,8 +31,11 @@ Releases carrying the authentication profile publish mutable metadata under
 `agents/kimi-code/authentication-v1/`. The original
 `agents/kimi-code/versions.json` index remains unchanged for older Tutti builds
 whose strict manifest decoder does not recognize the authentication profile
-reference. Point Tutti at the new index only after the first compatible Tutti
-version has been released.
+reference. A compatible Tutti release may select the new path first only while
+keeping the original index as an unavailable-path fallback. Publish that Tutti
+release before publishing the first authentication-v1 extension, then remove
+the fallback after the new metadata path has propagated. A fetched but invalid,
+incompatible, or withdrawn new index must never fall back to the original path.
 
 The extension declares Tutti's host-managed browser capability. When the host
 enables browser use, Kimi Code receives the same `/browser` composer capability

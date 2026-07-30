@@ -6,7 +6,6 @@ on:
       version:
         description: Immutable extension version
         required: true
-        default: "1.0.5"
       min_tutti_version:
         description: First released Tutti version that reads the authentication-v1 Kimi index
         required: true
