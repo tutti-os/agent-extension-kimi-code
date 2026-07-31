@@ -5,7 +5,6 @@
   "name": "Kimi Code",
   "description": "Kimi Code through the standard Agent Client Protocol",
   "icon": { "type": "asset", "src": "assets/icon.png" },
-  "maskIcon": { "type": "asset", "src": "assets/mask-icon.png" },
   "heroImage": { "type": "asset", "src": "assets/hero-image.jpg" },
   "runtime": {
     "kind": "standard-acp",
