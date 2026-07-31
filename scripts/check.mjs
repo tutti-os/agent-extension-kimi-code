@@ -37,7 +37,7 @@ const expectedSlashCommands = {
   commandCatalogAuthoritative: true,
   commands: [
     { name: 'compact', effect: 'submitImmediate' },
-    { name: 'status', effect: 'showStatus' },
+    { name: 'status', effect: 'submitImmediate' },
     { name: 'usage', effect: 'submitImmediate' },
     { name: 'mcp', effect: 'submitImmediate' },
     { name: 'tasks', effect: 'submitImmediate' },
@@ -128,6 +128,8 @@ async function verifyKimiSkillDiscovery() {
       '--cwd', workspace,
       '--timeout', '20',
       '--notification-wait', '5',
+      '--expect-command', 'status',
+      '--expect-command', 'usage',
       '--expect-command', 'skill:tutti-canonical-test',
       '--summary-only',
       '--',
