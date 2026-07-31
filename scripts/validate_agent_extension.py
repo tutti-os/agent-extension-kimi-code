@@ -19,6 +19,7 @@ PROFILE_SCHEMAS = {
     "tools": "tutti.agent.tools.v1",
     "capabilities": "tutti.agent.capabilities.v1",
     "composer": "tutti.agent.composer.v1",
+    "authentication": "tutti.agent.authentication.v1",
 }
 SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?$")
 EXACT_NPM_PACKAGE = re.compile(
@@ -34,6 +35,7 @@ DISCOVERY_SEARCH_PATH = re.compile(
     r"^[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*$"
 )
 SLASH_COMMAND_NAME = re.compile(r"^[a-z0-9][a-z0-9._:-]{0,63}$")
+AUTHENTICATION_METHOD_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 SLASH_COMMAND_EFFECTS = {
     "submitImmediate",
     "showReviewPicker",
@@ -373,6 +375,46 @@ def validate_capabilities_profile(profile: dict[str, Any]) -> dict[str, bool]:
     return declared
 
 
+def validate_authentication_profile(profile: dict[str, Any]) -> None:
+    reject_unknown_keys(profile, {"schemaVersion", "methods"}, "authentication")
+    methods = profile.get("methods")
+    if not isinstance(methods, list) or not 1 <= len(methods) <= 16:
+        raise ValidationError("authentication.methods must contain 1..16 entries")
+    seen: set[str] = set()
+    for index, method in enumerate(methods):
+        field = f"authentication.methods[{index}]"
+        if not isinstance(method, dict):
+            raise ValidationError(f"{field} must be an object")
+        reject_unknown_keys(method, {"id", "type", "command"}, field)
+        method_id = require_string(method.get("id"), f"{field}.id").strip()
+        if not AUTHENTICATION_METHOD_ID.fullmatch(method_id) or method_id in seen:
+            raise ValidationError(f"{field}.id must be a unique safe method ID")
+        seen.add(method_id)
+        if method.get("type") != "terminal":
+            raise ValidationError(f"{field}.type must be terminal")
+        command = method.get("command")
+        if not isinstance(command, dict):
+            raise ValidationError(f"{field}.command must be an object")
+        reject_unknown_keys(command, {"strategy", "args"}, f"{field}.command")
+        if command.get("strategy") != "runtime-subcommand":
+            raise ValidationError(
+                f"{field}.command.strategy must be runtime-subcommand"
+            )
+        args = require_string_array(
+            command.get("args"), f"{field}.command.args", non_empty=True
+        )
+        if len(args) > 16:
+            raise ValidationError(f"{field}.command.args must contain 1..16 entries")
+        for arg_index, argument in enumerate(args):
+            arg_field = f"{field}.command.args[{arg_index}]"
+            value = require_string(argument, arg_field)
+            if len(value) > 256 or any(
+                ord(character) < 32 or 127 <= ord(character) <= 159
+                for character in value
+            ):
+                raise ValidationError(f"{arg_field} is invalid")
+
+
 def validate_skill_root(root: Any, index: int) -> None:
     field = f"composer.skills.roots[{index}]"
     if not isinstance(root, dict):
@@ -514,6 +556,7 @@ def validate_profiles(profile_values: dict[str, dict[str, Any]]) -> None:
     validate_discovery_profile(profile_values["discovery"])
     validate_tools_profile(profile_values["tools"])
     capabilities = validate_capabilities_profile(profile_values["capabilities"])
+    validate_authentication_profile(profile_values["authentication"])
     composer_has_skills = validate_composer_profile(profile_values["composer"])
     if bool(capabilities.get("skills")) != composer_has_skills:
         raise ValidationError(

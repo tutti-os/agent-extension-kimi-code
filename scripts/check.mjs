@@ -6,7 +6,8 @@ const root = path.resolve(import.meta.dirname, '..');
 execFileSync(process.execPath, [path.join(root, 'scripts', 'package.mjs')], { stdio: 'inherit' });
 const packageDir = path.join(root, 'build', 'tutti-agent', 'package');
 const manifest = JSON.parse(await readFile(path.join(packageDir, 'tutti.agent.json'), 'utf8'));
-if (manifest.schemaVersion !== 'tutti.agent.manifest.v2' || manifest.agentKey !== 'kimi-code' || manifest.version !== '1.0.4') throw new Error('invalid manifest identity');
+const packageMetadata = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+if (manifest.schemaVersion !== 'tutti.agent.manifest.v2' || manifest.agentKey !== 'kimi-code' || manifest.version !== packageMetadata.version) throw new Error('invalid manifest identity');
 const expectedInstall = ['install', '--prefix', '${installRoot}', '@moonshot-ai/kimi-code@0.28.0'];
 if (manifest.runtime?.kind !== 'standard-acp' || manifest.runtime.install?.runner !== 'npm' || JSON.stringify(manifest.runtime.install.args) !== JSON.stringify(expectedInstall)) throw new Error('Kimi Code runtime must use the pinned, isolated npm contract');
 if (manifest.runtime.launch?.executable !== '${installRoot}/node_modules/.bin/kimi' || JSON.stringify(manifest.runtime.launch.args) !== JSON.stringify(['acp'])) throw new Error('Kimi Code managed launch contract changed');
@@ -19,6 +20,16 @@ if (JSON.stringify(candidate.launchArgs) !== JSON.stringify(['acp']) || candidat
 const capabilities = JSON.parse(await readFile(path.join(packageDir, manifest.profiles.capabilities), 'utf8'));
 const expectedCapabilities = { imageInput: true, audioInput: false, embeddedContext: true, browserUse: true, interrupt: true, resume: true, permissionModes: true, modelSelection: true, commands: true, skills: true };
 if (JSON.stringify(capabilities.declared) !== JSON.stringify(expectedCapabilities)) throw new Error('Kimi Code capabilities changed without runtime evidence');
+const authentication = JSON.parse(await readFile(path.join(packageDir, manifest.profiles.authentication), 'utf8'));
+const expectedAuthentication = {
+  schemaVersion: 'tutti.agent.authentication.v1',
+  methods: [{
+    id: 'login',
+    type: 'terminal',
+    command: { strategy: 'runtime-subcommand', args: ['login'] }
+  }]
+};
+if (JSON.stringify(authentication) !== JSON.stringify(expectedAuthentication)) throw new Error('Kimi Code terminal login contract changed');
 const composer = JSON.parse(await readFile(path.join(packageDir, manifest.profiles.composer), 'utf8'));
 const expectedModes = [{ runtimeId: 'plan', semantic: 'read-only' }, { runtimeId: 'default', semantic: 'ask-before-write' }, { runtimeId: 'auto', semantic: 'accept-edits' }, { runtimeId: 'yolo', semantic: 'full-access' }];
 if (JSON.stringify(composer.permissionModes) !== JSON.stringify(expectedModes)) throw new Error('Kimi Code permission mappings changed');
@@ -38,8 +49,51 @@ const expectedSkills = { invocation: 'textTrigger', triggerPrefix: '/skill:', ru
 if (JSON.stringify(composer.skills) !== JSON.stringify(expectedSkills)) throw new Error('Kimi Code Skill discovery contract changed');
 const tools = JSON.parse(await readFile(path.join(packageDir, manifest.profiles.tools), 'utf8'));
 if (tools.tools?.length !== 0) throw new Error('Kimi Code tools must remain generic');
+await verifyKimiAuthenticationContract();
 await verifyKimiSkillDiscovery();
 await rejectExecutables(packageDir);
+
+async function verifyKimiAuthenticationContract() {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), 'tutti-kimi-auth-'));
+  try {
+    const kimiExecutable = path.join(root, 'node_modules', '.bin', 'kimi');
+    const output = execFileSync('python3', [
+      path.join(root, 'scripts', 'probe_acp_runtime.py'),
+      '--cwd', temporaryRoot,
+      '--timeout', '20',
+      '--initialize-only',
+      '--',
+      kimiExecutable,
+      'acp'
+    ], {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        KIMI_CODE_HOME: temporaryRoot,
+        KIMI_DISABLE_TELEMETRY: '1'
+      }
+    });
+    const result = JSON.parse(output);
+    const login = result.initialize?.authMethods?.find((method) => method.id === 'login');
+    if (login?.type !== 'terminal') {
+      throw new Error('Kimi Code ACP must advertise the terminal login method');
+    }
+    const help = execFileSync(kimiExecutable, ['login', '--help'], {
+      encoding: 'utf8',
+      timeout: 10_000,
+      env: {
+        ...process.env,
+        KIMI_CODE_HOME: temporaryRoot,
+        KIMI_DISABLE_TELEMETRY: '1'
+      }
+    });
+    if (!help.includes('kimi login')) {
+      throw new Error('Kimi Code runtime no longer supports the declared login subcommand');
+    }
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true });
+  }
+}
 
 async function verifyKimiSkillDiscovery() {
   const temporaryRoot = await mkdtemp(path.join(tmpdir(), 'tutti-kimi-skill-'));
