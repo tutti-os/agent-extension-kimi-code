@@ -46,6 +46,10 @@ session commands (`compact`, `status`, `usage`, `mcp`, `tasks`, and `help`).
 Other runtime-advertised entries are projected as Skills with their exact slash
 triggers instead of crowding the command group. Tutti therefore presents three
 distinct groups: Commands, Capabilities (including Browser), and Skills.
+Both `/status` and `/usage` are submitted to the Kimi ACP runtime. The runtime
+remains the single owner of Kimi configuration, credentials, account APIs, and
+quota interpretation; Tutti does not add a Kimi-specific Desktop account
+probe.
 
 ## Validation
 
