@@ -37,7 +37,7 @@ const expectedSlashCommands = {
   commandCatalogAuthoritative: true,
   commands: [
     { name: 'compact', effect: 'submitImmediate' },
-    { name: 'status', effect: 'submitImmediate' },
+    { name: 'status', effect: 'showStatus' },
     { name: 'usage', effect: 'submitImmediate' },
     { name: 'mcp', effect: 'submitImmediate' },
     { name: 'tasks', effect: 'submitImmediate' },
