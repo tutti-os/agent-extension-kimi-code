@@ -34,6 +34,10 @@ BINARY_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 DISCOVERY_SEARCH_PATH = re.compile(
     r"^[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*$"
 )
+RUNTIME_ENVIRONMENT_KEY = re.compile(r"^[A-Z][A-Z0-9_]{0,127}$")
+RUNTIME_ENVIRONMENT_REFERENCE = re.compile(
+    r"^\$\{env:(TUTTI_[A-Z0-9_]{1,120})\}$"
+)
 SLASH_COMMAND_NAME = re.compile(r"^[a-z0-9][a-z0-9._:-]{0,63}$")
 AUTHENTICATION_METHOD_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 SLASH_COMMAND_EFFECTS = {
@@ -226,7 +230,7 @@ def check_install(runtime: dict[str, Any]) -> None:
     if not isinstance(install, dict) or not isinstance(launch, dict):
         raise ValidationError("runtime.install and runtime.launch must be objects")
     reject_unknown_keys(install, {"runner", "args"}, "runtime.install")
-    reject_unknown_keys(launch, {"executable", "args"}, "runtime.launch")
+    reject_unknown_keys(launch, {"executable", "args", "env"}, "runtime.launch")
     runner = install.get("runner")
     if runner not in {"npm", "pnpm", "uv"}:
         raise ValidationError("runtime.install.runner must be npm, pnpm, or uv")
@@ -257,6 +261,14 @@ def check_install(runtime: dict[str, Any]) -> None:
     ):
         raise ValidationError("launch executable must stay under ${installRoot}")
     require_string_array(launch.get("args"), "runtime.launch.args")
+    environment = launch.get("env", {})
+    if not isinstance(environment, dict) or len(environment) > 32:
+        raise ValidationError("runtime.launch.env must contain at most 32 entries")
+    for key, value in environment.items():
+        if not isinstance(key, str) or not RUNTIME_ENVIRONMENT_KEY.fullmatch(key):
+            raise ValidationError("runtime.launch.env contains an invalid key")
+        if not isinstance(value, str) or not RUNTIME_ENVIRONMENT_REFERENCE.fullmatch(value.strip()):
+            raise ValidationError("runtime.launch.env values must reference a TUTTI_* variable")
 
 
 def validate_discovery_profile(profile: dict[str, Any]) -> None:

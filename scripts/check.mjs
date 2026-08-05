@@ -10,7 +10,7 @@ const packageMetadata = JSON.parse(await readFile(path.join(root, 'package.json'
 if (manifest.schemaVersion !== 'tutti.agent.manifest.v2' || manifest.agentKey !== 'kimi-code' || manifest.version !== packageMetadata.version) throw new Error('invalid manifest identity');
 const expectedInstall = ['install', '--prefix', '${installRoot}', '@moonshot-ai/kimi-code@0.28.0'];
 if (manifest.runtime?.kind !== 'standard-acp' || manifest.runtime.install?.runner !== 'npm' || JSON.stringify(manifest.runtime.install.args) !== JSON.stringify(expectedInstall)) throw new Error('Kimi Code runtime must use the pinned, isolated npm contract');
-if (manifest.runtime.launch?.executable !== '${installRoot}/node_modules/.bin/kimi' || JSON.stringify(manifest.runtime.launch.args) !== JSON.stringify(['acp'])) throw new Error('Kimi Code managed launch contract changed');
+if (manifest.runtime.launch?.executable !== '${installRoot}/node_modules/.bin/kimi' || JSON.stringify(manifest.runtime.launch.args) !== JSON.stringify(['acp']) || JSON.stringify(manifest.runtime.launch.env) !== JSON.stringify({ KIMI_SHELL_PATH: '${env:TUTTI_MANAGED_POSIX_SHELL}' })) throw new Error('Kimi Code managed launch contract changed');
 const discovery = JSON.parse(await readFile(path.join(packageDir, manifest.profiles.discovery), 'utf8'));
 const candidate = discovery.candidates?.[0];
 if (discovery.candidates?.length !== 1 || JSON.stringify(candidate.binaryNames) !== JSON.stringify(['kimi'])) throw new Error('Kimi Code discovery binary changed');

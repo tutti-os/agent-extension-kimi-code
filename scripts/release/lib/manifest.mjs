@@ -45,6 +45,8 @@ const binaryNamePattern = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
 const discoverySearchPathPattern = /^[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/u;
 const slashCommandNamePattern = /^[a-z0-9][a-z0-9._:-]{0,63}$/u;
 const authenticationMethodIdPattern = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u;
+const runtimeEnvironmentKeyPattern = /^[A-Z][A-Z0-9_]{0,127}$/u;
+const runtimeEnvironmentReferencePattern = /^\$\{env:(TUTTI_[A-Z0-9_]{1,120})\}$/u;
 const slashCommandEffects = new Set([
   "submitImmediate",
   "showReviewPicker",
@@ -181,7 +183,7 @@ function validateRuntime(runtime) {
   if (!runtime.launch || typeof runtime.launch !== "object") {
     throw new Error("manifest runtime.launch is required");
   }
-  rejectUnknownKeys(runtime.launch, ["executable", "args"], "runtime launch");
+  rejectUnknownKeys(runtime.launch, ["executable", "args", "env"], "runtime launch");
   const executable = requireString(
     runtime.launch.executable,
     "runtime launch executable"
@@ -195,6 +197,15 @@ function validateRuntime(runtime) {
     throw new Error("runtime launch executable must stay under ${installRoot}");
   }
   validateArgv(runtime.launch.args ?? [], "runtime launch args");
+  const environment = runtime.launch.env ?? {};
+  if (!environment || typeof environment !== "object" || Array.isArray(environment) || Object.keys(environment).length > 32) {
+    throw new Error("runtime launch env must contain at most 32 entries");
+  }
+  for (const [key, value] of Object.entries(environment)) {
+    if (!runtimeEnvironmentKeyPattern.test(key) || typeof value !== "string" || !runtimeEnvironmentReferencePattern.test(value.trim())) {
+      throw new Error("runtime launch env values must reference a TUTTI_* variable");
+    }
+  }
 }
 
 function validateInstall(install) {
