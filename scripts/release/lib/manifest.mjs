@@ -509,23 +509,46 @@ function validateProfileShape(kind, profile) {
     const methodIds = new Set();
     for (const [index, method] of profile.methods.entries()) {
       const label = `authentication.methods[${index}]`;
-      rejectObjectKeys(method, ["id", "type", "command"], label);
+      rejectObjectKeys(
+        method,
+        ["id", "name", "description", "type", "command"],
+        label
+      );
       const id = requireString(method.id, `${label}.id`).trim();
       if (!authenticationMethodIdPattern.test(id) || methodIds.has(id)) {
         throw new Error(`${label}.id must be a unique safe method ID`);
       }
       methodIds.add(id);
+      for (const [key, limit] of [
+        ["name", 128],
+        ["description", 512]
+      ]) {
+        if (method[key] === undefined) continue;
+        const value = method[key];
+        requireString(value, `${label}.${key}`);
+        if (
+          value !== value.trim() ||
+          value.length > limit ||
+          /[\u0000-\u001f\u007f-\u009f]/u.test(value)
+        ) {
+          throw new Error(`${label}.${key} is invalid`);
+        }
+      }
       if (method.type !== "terminal") {
         throw new Error(`${label}.type must be terminal`);
       }
       rejectObjectKeys(
         method.command,
-        ["strategy", "args"],
+        ["strategy", "args", "readyText"],
         `${label}.command`
       );
-      if (method.command.strategy !== "runtime-subcommand") {
+      const strategy = method.command.strategy;
+      if (
+        strategy !== "runtime-subcommand" &&
+        strategy !== "runtime-slash-command"
+      ) {
         throw new Error(
-          `${label}.command.strategy must be runtime-subcommand`
+          `${label}.command.strategy must be runtime-subcommand or runtime-slash-command`
         );
       }
       if (
@@ -546,6 +569,33 @@ function validateProfileShape(kind, profile) {
         ) {
           throw new Error(`${label}.command.args[${argIndex}] is invalid`);
         }
+      }
+      if (strategy === "runtime-slash-command") {
+        if (
+          method.command.args.length !== 1 ||
+          !slashCommandNamePattern.test(method.command.args[0])
+        ) {
+          throw new Error(
+            `${label}.command.args must contain one safe slash command name`
+          );
+        }
+        const rawReadyText = method.command.readyText;
+        const readyText = requireString(
+          rawReadyText,
+          `${label}.command.readyText`
+        );
+        if (
+          readyText.length === 0 ||
+          rawReadyText !== readyText ||
+          readyText.length > 256 ||
+          /[\u0000-\u001f\u007f-\u009f]/u.test(readyText)
+        ) {
+          throw new Error(`${label}.command.readyText is invalid`);
+        }
+      } else if (method.command.readyText !== undefined) {
+        throw new Error(
+          `${label}.command.readyText is supported only for runtime-slash-command`
+        );
       }
     }
     return;

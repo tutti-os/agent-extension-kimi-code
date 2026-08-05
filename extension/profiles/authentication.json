@@ -3,10 +3,13 @@
   "methods": [
     {
       "id": "login",
+      "name": "Set up Kimi",
+      "description": "Open Kimi Code's interactive platform selector.",
       "type": "terminal",
       "command": {
-        "strategy": "runtime-subcommand",
-        "args": ["login"]
+        "strategy": "runtime-slash-command",
+        "args": ["login"],
+        "readyText": "Welcome to Kimi Code!"
       }
     }
   ]
