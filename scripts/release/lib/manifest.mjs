@@ -509,12 +509,31 @@ function validateProfileShape(kind, profile) {
     const methodIds = new Set();
     for (const [index, method] of profile.methods.entries()) {
       const label = `authentication.methods[${index}]`;
-      rejectObjectKeys(method, ["id", "type", "command"], label);
+      rejectObjectKeys(
+        method,
+        ["id", "name", "description", "type", "command"],
+        label
+      );
       const id = requireString(method.id, `${label}.id`).trim();
       if (!authenticationMethodIdPattern.test(id) || methodIds.has(id)) {
         throw new Error(`${label}.id must be a unique safe method ID`);
       }
       methodIds.add(id);
+      for (const [key, limit] of [
+        ["name", 128],
+        ["description", 512]
+      ]) {
+        if (method[key] === undefined) continue;
+        const value = method[key];
+        requireString(value, `${label}.${key}`);
+        if (
+          value !== value.trim() ||
+          value.length > limit ||
+          /[\u0000-\u001f\u007f-\u009f]/u.test(value)
+        ) {
+          throw new Error(`${label}.${key} is invalid`);
+        }
+      }
       if (method.type !== "terminal") {
         throw new Error(`${label}.type must be terminal`);
       }
@@ -523,17 +542,27 @@ function validateProfileShape(kind, profile) {
         ["strategy", "args"],
         `${label}.command`
       );
-      if (method.command.strategy !== "runtime-subcommand") {
+      if (
+        method.command.strategy !== "runtime" &&
+        method.command.strategy !== "runtime-subcommand"
+      ) {
         throw new Error(
-          `${label}.command.strategy must be runtime-subcommand`
+          `${label}.command.strategy must be runtime or runtime-subcommand`
         );
       }
       if (
         !Array.isArray(method.command.args) ||
-        method.command.args.length === 0 ||
+        (method.command.strategy === "runtime-subcommand" &&
+          method.command.args.length === 0) ||
         method.command.args.length > 16
       ) {
         throw new Error(`${label}.command.args must contain 1..16 entries`);
+      }
+      if (
+        method.command.strategy === "runtime" &&
+        method.command.args.length !== 0
+      ) {
+        throw new Error(`${label}.command.args must be empty for runtime`);
       }
       for (const [argIndex, argument] of method.command.args.entries()) {
         const value = requireString(

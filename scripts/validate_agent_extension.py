@@ -397,24 +397,40 @@ def validate_authentication_profile(profile: dict[str, Any]) -> None:
         field = f"authentication.methods[{index}]"
         if not isinstance(method, dict):
             raise ValidationError(f"{field} must be an object")
-        reject_unknown_keys(method, {"id", "type", "command"}, field)
+        reject_unknown_keys(
+            method, {"id", "name", "description", "type", "command"}, field
+        )
         method_id = require_string(method.get("id"), f"{field}.id").strip()
         if not AUTHENTICATION_METHOD_ID.fullmatch(method_id) or method_id in seen:
             raise ValidationError(f"{field}.id must be a unique safe method ID")
         seen.add(method_id)
+        for key, limit in (("name", 128), ("description", 512)):
+            if key not in method:
+                continue
+            value = require_string(method.get(key), f"{field}.{key}")
+            if value != value.strip() or len(value) > limit or any(
+                ord(character) < 32 or 127 <= ord(character) <= 159
+                for character in value
+            ):
+                raise ValidationError(f"{field}.{key} is invalid")
         if method.get("type") != "terminal":
             raise ValidationError(f"{field}.type must be terminal")
         command = method.get("command")
         if not isinstance(command, dict):
             raise ValidationError(f"{field}.command must be an object")
         reject_unknown_keys(command, {"strategy", "args"}, f"{field}.command")
-        if command.get("strategy") != "runtime-subcommand":
+        strategy = command.get("strategy")
+        if strategy not in {"runtime", "runtime-subcommand"}:
             raise ValidationError(
-                f"{field}.command.strategy must be runtime-subcommand"
+                f"{field}.command.strategy must be runtime or runtime-subcommand"
             )
         args = require_string_array(
-            command.get("args"), f"{field}.command.args", non_empty=True
+            command.get("args"),
+            f"{field}.command.args",
+            non_empty=strategy == "runtime-subcommand",
         )
+        if strategy == "runtime" and args:
+            raise ValidationError(f"{field}.command.args must be empty for runtime")
         if len(args) > 16:
             raise ValidationError(f"{field}.command.args must contain 1..16 entries")
         for arg_index, argument in enumerate(args):

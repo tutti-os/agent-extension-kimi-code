@@ -22,10 +22,11 @@ Models and permission modes are projected from the live ACP session. The
 signed profile maps `plan`, `default`, `auto`, and `yolo` to Tutti's semantic
 permission tiers without embedding provider-specific daemon code.
 
-The signed authentication profile binds Kimi's runtime-advertised `login`
-method to the local `kimi login` subcommand. Tutti supplies only the generic
-terminal launcher; the provider-specific login command remains declarative in
-this extension package.
+The signed authentication profile presents Kimi's runtime-advertised `login`
+method as `Set up Kimi` and opens the local Kimi Code terminal UI. Users keep
+credential handling inside Kimi Code: `/login` configures Coding Plan and
+`/provider` configures an API key. Tutti supplies only the generic terminal
+launcher and never reads or stores the credential.
 
 Releases carrying the authentication profile publish mutable metadata under
 `agents/kimi-code/authentication-v1/`. The original

@@ -94,7 +94,7 @@ test("signs and verifies the actual packaged Kimi Code extension", async () => {
     packageDir,
     outputDir: path.join(root, "out"),
     baseUrl: "https://d1x7gb6wqsqmnm.cloudfront.net/tutti-agent-releases",
-    version: "1.0.8",
+    version: "1.0.9",
     signingKeyId: "tutti-kimi-code-release-v1",
     privateKey: keys.privateKey,
     publishedAt: "2026-07-29T00:00:00Z",
@@ -244,9 +244,29 @@ test("both validators enforce declarative authentication commands", async () => 
   );
   await assertBothValidatorsReject(
     packageDir,
-    /command.strategy must be runtime-subcommand/u
+    /command.strategy must be runtime or runtime-subcommand/u
   );
 
+  authentication.methods[0].command.strategy = "runtime";
+  authentication.methods[0].command.args = ["login"];
+  await writeFile(
+    authenticationPath,
+    `${JSON.stringify(authentication, null, 2)}\n`
+  );
+  await assertBothValidatorsReject(
+    packageDir,
+    /command.args must be empty for runtime/u
+  );
+
+  authentication.methods[0].command.args = [];
+  authentication.methods[0].name = " Set up Kimi";
+  await writeFile(
+    authenticationPath,
+    `${JSON.stringify(authentication, null, 2)}\n`
+  );
+  await assertBothValidatorsReject(packageDir, /\.name is invalid/u);
+
+  authentication.methods[0].name = "Set up Kimi";
   authentication.methods[0].command.strategy = "runtime-subcommand";
   authentication.methods[0].command.args = ["login\nnext"];
   await writeFile(

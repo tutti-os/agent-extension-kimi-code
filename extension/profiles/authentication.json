@@ -3,10 +3,12 @@
   "methods": [
     {
       "id": "login",
+      "name": "Set up Kimi",
+      "description": "Open Kimi Code, then use /login for Coding Plan or /provider for an API key.",
       "type": "terminal",
       "command": {
-        "strategy": "runtime-subcommand",
-        "args": ["login"]
+        "strategy": "runtime",
+        "args": []
       }
     }
   ]

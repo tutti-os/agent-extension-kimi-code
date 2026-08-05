@@ -25,11 +25,13 @@ const expectedAuthentication = {
   schemaVersion: 'tutti.agent.authentication.v1',
   methods: [{
     id: 'login',
+    name: 'Set up Kimi',
+    description: 'Open Kimi Code, then use /login for Coding Plan or /provider for an API key.',
     type: 'terminal',
-    command: { strategy: 'runtime-subcommand', args: ['login'] }
+    command: { strategy: 'runtime', args: [] }
   }]
 };
-if (JSON.stringify(authentication) !== JSON.stringify(expectedAuthentication)) throw new Error('Kimi Code terminal login contract changed');
+if (JSON.stringify(authentication) !== JSON.stringify(expectedAuthentication)) throw new Error('Kimi Code terminal setup contract changed');
 const composer = JSON.parse(await readFile(path.join(packageDir, manifest.profiles.composer), 'utf8'));
 const expectedModes = [{ runtimeId: 'plan', semantic: 'read-only' }, { runtimeId: 'default', semantic: 'ask-before-write' }, { runtimeId: 'auto', semantic: 'accept-edits' }, { runtimeId: 'yolo', semantic: 'full-access' }];
 if (JSON.stringify(composer.permissionModes) !== JSON.stringify(expectedModes)) throw new Error('Kimi Code permission mappings changed');
@@ -78,7 +80,7 @@ async function verifyKimiAuthenticationContract() {
     if (login?.type !== 'terminal') {
       throw new Error('Kimi Code ACP must advertise the terminal login method');
     }
-    const help = execFileSync(kimiExecutable, ['login', '--help'], {
+    const help = execFileSync(kimiExecutable, ['--help'], {
       encoding: 'utf8',
       timeout: 10_000,
       env: {
@@ -87,8 +89,8 @@ async function verifyKimiAuthenticationContract() {
         KIMI_DISABLE_TELEMETRY: '1'
       }
     });
-    if (!help.includes('kimi login')) {
-      throw new Error('Kimi Code runtime no longer supports the declared login subcommand');
+    if (!help.includes('login') || !help.includes('provider')) {
+      throw new Error('Kimi Code runtime no longer exposes both supported setup flows');
     }
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });
