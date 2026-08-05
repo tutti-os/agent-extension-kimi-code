@@ -94,7 +94,7 @@ test("signs and verifies the actual packaged Kimi Code extension", async () => {
     packageDir,
     outputDir: path.join(root, "out"),
     baseUrl: "https://d1x7gb6wqsqmnm.cloudfront.net/tutti-agent-releases",
-    version: "1.0.7",
+    version: "1.0.8",
     signingKeyId: "tutti-kimi-code-release-v1",
     privateKey: keys.privateKey,
     publishedAt: "2026-07-29T00:00:00Z",
@@ -102,6 +102,9 @@ test("signs and verifies the actual packaged Kimi Code extension", async () => {
   });
   assert.equal(result.release.manifest.agentKey, "kimi-code");
   assert.deepEqual(result.release.manifest.runtime.launch.args, ["acp"]);
+  assert.deepEqual(result.release.manifest.runtime.launch.env, {
+    KIMI_SHELL_PATH: "${env:TUTTI_MANAGED_POSIX_SHELL}",
+  });
   await verifyRelease({
     releaseFile: result.releaseJsonPath,
     artifact: result.artifactPath,

@@ -68,7 +68,18 @@
           "required": ["executable", "args"],
           "properties": {
             "executable": { "type": "string", "minLength": 1 },
-            "args": { "type": "array", "items": { "type": "string" } }
+            "args": { "type": "array", "items": { "type": "string" } },
+            "env": {
+              "type": "object",
+              "maxProperties": 32,
+              "additionalProperties": false,
+              "patternProperties": {
+                "^[A-Z][A-Z0-9_]{0,127}$": {
+                  "type": "string",
+                  "pattern": "^\\$\\{env:TUTTI_[A-Z0-9_]{1,120}\\}$"
+                }
+              }
+            }
           }
         }
       }

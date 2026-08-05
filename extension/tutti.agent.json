@@ -1,7 +1,7 @@
 {
   "schemaVersion": "tutti.agent.manifest.v2",
   "agentKey": "kimi-code",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "name": "Kimi Code",
   "description": "Kimi Code through the standard Agent Client Protocol",
   "icon": { "type": "asset", "src": "assets/icon.png" },
@@ -14,7 +14,10 @@
     },
     "launch": {
       "executable": "${installRoot}/node_modules/.bin/kimi",
-      "args": ["acp"]
+      "args": ["acp"],
+      "env": {
+        "KIMI_SHELL_PATH": "${env:TUTTI_MANAGED_POSIX_SHELL}"
+      }
     }
   },
   "profiles": {
