@@ -419,18 +419,15 @@ def validate_authentication_profile(profile: dict[str, Any]) -> None:
         if not isinstance(command, dict):
             raise ValidationError(f"{field}.command must be an object")
         reject_unknown_keys(command, {"strategy", "args"}, f"{field}.command")
-        strategy = command.get("strategy")
-        if strategy not in {"runtime", "runtime-subcommand"}:
+        if command.get("strategy") != "runtime-subcommand":
             raise ValidationError(
-                f"{field}.command.strategy must be runtime or runtime-subcommand"
+                f"{field}.command.strategy must be runtime-subcommand"
             )
         args = require_string_array(
             command.get("args"),
             f"{field}.command.args",
-            non_empty=strategy == "runtime-subcommand",
+            non_empty=True,
         )
-        if strategy == "runtime" and args:
-            raise ValidationError(f"{field}.command.args must be empty for runtime")
         if len(args) > 16:
             raise ValidationError(f"{field}.command.args must contain 1..16 entries")
         for arg_index, argument in enumerate(args):

@@ -244,21 +244,10 @@ test("both validators enforce declarative authentication commands", async () => 
   );
   await assertBothValidatorsReject(
     packageDir,
-    /command.strategy must be runtime or runtime-subcommand/u
+    /command.strategy must be runtime-subcommand/u
   );
 
-  authentication.methods[0].command.strategy = "runtime";
-  authentication.methods[0].command.args = ["login"];
-  await writeFile(
-    authenticationPath,
-    `${JSON.stringify(authentication, null, 2)}\n`
-  );
-  await assertBothValidatorsReject(
-    packageDir,
-    /command.args must be empty for runtime/u
-  );
-
-  authentication.methods[0].command.args = [];
+  authentication.methods[0].command.strategy = "runtime-subcommand";
   authentication.methods[0].name = " Set up Kimi";
   await writeFile(
     authenticationPath,
@@ -267,7 +256,6 @@ test("both validators enforce declarative authentication commands", async () => 
   await assertBothValidatorsReject(packageDir, /\.name is invalid/u);
 
   authentication.methods[0].name = "Set up Kimi";
-  authentication.methods[0].command.strategy = "runtime-subcommand";
   authentication.methods[0].command.args = ["login\nnext"];
   await writeFile(
     authenticationPath,

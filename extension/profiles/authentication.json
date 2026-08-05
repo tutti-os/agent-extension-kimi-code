@@ -4,11 +4,11 @@
     {
       "id": "login",
       "name": "Set up Kimi",
-      "description": "Open Kimi Code, then use /login for Coding Plan or /provider for an API key.",
+      "description": "Open the Kimi Coding Plan login flow.",
       "type": "terminal",
       "command": {
-        "strategy": "runtime",
-        "args": []
+        "strategy": "runtime-subcommand",
+        "args": ["login"]
       }
     }
   ]

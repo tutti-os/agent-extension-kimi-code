@@ -542,27 +542,17 @@ function validateProfileShape(kind, profile) {
         ["strategy", "args"],
         `${label}.command`
       );
-      if (
-        method.command.strategy !== "runtime" &&
-        method.command.strategy !== "runtime-subcommand"
-      ) {
+      if (method.command.strategy !== "runtime-subcommand") {
         throw new Error(
-          `${label}.command.strategy must be runtime or runtime-subcommand`
+          `${label}.command.strategy must be runtime-subcommand`
         );
       }
       if (
         !Array.isArray(method.command.args) ||
-        (method.command.strategy === "runtime-subcommand" &&
-          method.command.args.length === 0) ||
+        method.command.args.length === 0 ||
         method.command.args.length > 16
       ) {
         throw new Error(`${label}.command.args must contain 1..16 entries`);
-      }
-      if (
-        method.command.strategy === "runtime" &&
-        method.command.args.length !== 0
-      ) {
-        throw new Error(`${label}.command.args must be empty for runtime`);
       }
       for (const [argIndex, argument] of method.command.args.entries()) {
         const value = requireString(

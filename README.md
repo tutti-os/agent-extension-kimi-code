@@ -23,10 +23,9 @@ signed profile maps `plan`, `default`, `auto`, and `yolo` to Tutti's semantic
 permission tiers without embedding provider-specific daemon code.
 
 The signed authentication profile presents Kimi's runtime-advertised `login`
-method as `Set up Kimi` and opens the local Kimi Code terminal UI. Users keep
-credential handling inside Kimi Code: `/login` configures Coding Plan and
-`/provider` configures an API key. Tutti supplies only the generic terminal
-launcher and never reads or stores the credential.
+method as `Set up Kimi` and opens the local `kimi login` flow directly. Tutti
+supplies only the generic terminal launcher; Kimi Code owns the interactive
+Coding Plan sign-in and credential storage.
 
 Releases carrying the authentication profile publish mutable metadata under
 `agents/kimi-code/authentication-v1/`. The original
