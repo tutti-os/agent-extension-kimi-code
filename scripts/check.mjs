@@ -26,9 +26,13 @@ const expectedAuthentication = {
   methods: [{
     id: 'login',
     name: 'Set up Kimi',
-    description: 'Open the Kimi Coding Plan login flow.',
+    description: "Open Kimi Code's interactive platform selector.",
     type: 'terminal',
-    command: { strategy: 'runtime-subcommand', args: ['login'] }
+    command: {
+      strategy: 'runtime-slash-command',
+      args: ['login'],
+      readyText: 'Welcome to Kimi Code!'
+    }
   }]
 };
 if (JSON.stringify(authentication) !== JSON.stringify(expectedAuthentication)) throw new Error('Kimi Code terminal login contract changed');
@@ -80,7 +84,7 @@ async function verifyKimiAuthenticationContract() {
     if (login?.type !== 'terminal') {
       throw new Error('Kimi Code ACP must advertise the terminal login method');
     }
-    const help = execFileSync(kimiExecutable, ['login', '--help'], {
+    const help = execFileSync(kimiExecutable, ['--help'], {
       encoding: 'utf8',
       timeout: 10_000,
       env: {
@@ -89,8 +93,8 @@ async function verifyKimiAuthenticationContract() {
         KIMI_DISABLE_TELEMETRY: '1'
       }
     });
-    if (!help.includes('kimi login')) {
-      throw new Error('Kimi Code runtime no longer supports the declared login subcommand');
+    if (!help.includes('Usage: kimi')) {
+      throw new Error('Kimi Code runtime no longer supports the declared interactive entrypoint');
     }
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });

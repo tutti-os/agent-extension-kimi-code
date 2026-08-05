@@ -418,10 +418,13 @@ def validate_authentication_profile(profile: dict[str, Any]) -> None:
         command = method.get("command")
         if not isinstance(command, dict):
             raise ValidationError(f"{field}.command must be an object")
-        reject_unknown_keys(command, {"strategy", "args"}, f"{field}.command")
-        if command.get("strategy") != "runtime-subcommand":
+        reject_unknown_keys(
+            command, {"strategy", "args", "readyText"}, f"{field}.command"
+        )
+        strategy = command.get("strategy")
+        if strategy not in {"runtime-subcommand", "runtime-slash-command"}:
             raise ValidationError(
-                f"{field}.command.strategy must be runtime-subcommand"
+                f"{field}.command.strategy must be runtime-subcommand or runtime-slash-command"
             )
         args = require_string_array(
             command.get("args"),
@@ -438,6 +441,28 @@ def validate_authentication_profile(profile: dict[str, Any]) -> None:
                 for character in value
             ):
                 raise ValidationError(f"{arg_field} is invalid")
+        if strategy == "runtime-slash-command":
+            if len(args) != 1 or not SLASH_COMMAND_NAME.fullmatch(args[0]):
+                raise ValidationError(
+                    f"{field}.command.args must contain one safe slash command name"
+                )
+            ready_text = require_string(
+                command.get("readyText"), f"{field}.command.readyText"
+            )
+            if (
+                not ready_text
+                or ready_text != ready_text.strip()
+                or len(ready_text) > 256
+                or any(
+                    ord(character) < 32 or 127 <= ord(character) <= 159
+                    for character in ready_text
+                )
+            ):
+                raise ValidationError(f"{field}.command.readyText is invalid")
+        elif "readyText" in command:
+            raise ValidationError(
+                f"{field}.command.readyText is supported only for runtime-slash-command"
+            )
 
 
 def validate_skill_root(root: Any, index: int) -> None:

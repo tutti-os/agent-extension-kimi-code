@@ -539,12 +539,16 @@ function validateProfileShape(kind, profile) {
       }
       rejectObjectKeys(
         method.command,
-        ["strategy", "args"],
+        ["strategy", "args", "readyText"],
         `${label}.command`
       );
-      if (method.command.strategy !== "runtime-subcommand") {
+      const strategy = method.command.strategy;
+      if (
+        strategy !== "runtime-subcommand" &&
+        strategy !== "runtime-slash-command"
+      ) {
         throw new Error(
-          `${label}.command.strategy must be runtime-subcommand`
+          `${label}.command.strategy must be runtime-subcommand or runtime-slash-command`
         );
       }
       if (
@@ -565,6 +569,33 @@ function validateProfileShape(kind, profile) {
         ) {
           throw new Error(`${label}.command.args[${argIndex}] is invalid`);
         }
+      }
+      if (strategy === "runtime-slash-command") {
+        if (
+          method.command.args.length !== 1 ||
+          !slashCommandNamePattern.test(method.command.args[0])
+        ) {
+          throw new Error(
+            `${label}.command.args must contain one safe slash command name`
+          );
+        }
+        const rawReadyText = method.command.readyText;
+        const readyText = requireString(
+          rawReadyText,
+          `${label}.command.readyText`
+        );
+        if (
+          readyText.length === 0 ||
+          rawReadyText !== readyText ||
+          readyText.length > 256 ||
+          /[\u0000-\u001f\u007f-\u009f]/u.test(readyText)
+        ) {
+          throw new Error(`${label}.command.readyText is invalid`);
+        }
+      } else if (method.command.readyText !== undefined) {
+        throw new Error(
+          `${label}.command.readyText is supported only for runtime-slash-command`
+        );
       }
     }
     return;

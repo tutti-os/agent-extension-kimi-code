@@ -244,7 +244,7 @@ test("both validators enforce declarative authentication commands", async () => 
   );
   await assertBothValidatorsReject(
     packageDir,
-    /command.strategy must be runtime-subcommand/u
+    /command.strategy must be runtime-subcommand or runtime-slash-command/u
   );
 
   authentication.methods[0].command.strategy = "runtime-subcommand";
@@ -274,6 +274,45 @@ test("both validators enforce declarative authentication commands", async () => 
   await assertBothValidatorsReject(
     packageDir,
     /command.args\[0\] is invalid/u
+  );
+
+  authentication.methods[0].command = {
+    strategy: "runtime-slash-command",
+    args: ["login now"],
+    readyText: "Welcome to Kimi Code!"
+  };
+  await writeFile(
+    authenticationPath,
+    `${JSON.stringify(authentication, null, 2)}\n`
+  );
+  await assertBothValidatorsReject(
+    packageDir,
+    /command.args must contain one safe slash command name/u
+  );
+
+  authentication.methods[0].command.args = ["login"];
+  authentication.methods[0].command.readyText = " Welcome to Kimi Code!";
+  await writeFile(
+    authenticationPath,
+    `${JSON.stringify(authentication, null, 2)}\n`
+  );
+  await assertBothValidatorsReject(
+    packageDir,
+    /command.readyText is invalid/u
+  );
+
+  authentication.methods[0].command = {
+    strategy: "runtime-subcommand",
+    args: ["login"],
+    readyText: "Welcome to Kimi Code!"
+  };
+  await writeFile(
+    authenticationPath,
+    `${JSON.stringify(authentication, null, 2)}\n`
+  );
+  await assertBothValidatorsReject(
+    packageDir,
+    /command.readyText is supported only for runtime-slash-command/u
   );
 });
 
