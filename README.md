@@ -48,9 +48,14 @@ Other runtime-advertised entries are projected as Skills with their exact slash
 triggers instead of crowding the command group. Tutti therefore presents three
 distinct groups: Commands, Capabilities (including Browser), and Skills.
 `/status` opens Tutti's provider-neutral status panel, while `/usage` is
-submitted to the Kimi ACP runtime. The runtime remains the single owner of Kimi
-configuration, credentials, account APIs, and quota interpretation; Tutti does
-not add a Kimi-specific Desktop account probe.
+submitted to the Kimi ACP runtime. Kimi Code remains the owner of login and
+provider configuration. Because the pinned 0.28.0 ACP runtime does not publish
+structured Coding Plan account windows, Tutti Desktop also runs a narrow
+account probe in Electron main: API-key providers display `API Usage Billing`
+without projecting the key, while the managed provider uses its request-local
+OAuth token to fetch `/usages` and projects only provider-neutral quota
+percentages and reset times. Credentials and raw responses never enter the
+renderer or logs, and the signed extension remains fully declarative.
 
 ## Validation
 
