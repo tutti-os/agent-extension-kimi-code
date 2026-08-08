@@ -13,8 +13,8 @@ importers:
         version: 7.8.0
     devDependencies:
       '@moonshot-ai/kimi-code':
-        specifier: 0.28.0
-        version: 0.28.0
+        specifier: 0.34.0
+        version: 0.34.0
 
 packages:
 
@@ -81,8 +81,8 @@ packages:
     resolution: {integrity: sha512-ABnA53mdfkGZwOFUdZNv2S0CWGO/EIuPj8Vv9xmBFmSYg/qFc7ihO6q5FcQjvoE67kZpWkEc4AhD6B/os04yuA==}
     engines: {node: '>= 10'}
 
-  '@moonshot-ai/kimi-code@0.28.0':
-    resolution: {integrity: sha512-a5INYYVuYpdoibDLrhL5Sqdr4AlqgDxN+T68Qij05EBfeo1SStcmR01bLEjxB9fViBwKlyl+bq0iyHFzoKyfHw==}
+  '@moonshot-ai/kimi-code@0.34.0':
+    resolution: {integrity: sha512-Z2zNKXrGRirZJ0DsVBvTNsl6xMmt5SoDQkHwBw3lrssFNiu/mz+w9RRm5lYAidoKbEdGMduqQ08xwfcd5QU+/g==}
     engines: {node: '>=22.19.0'}
     hasBin: true
 
@@ -143,7 +143,7 @@ snapshots:
       '@mariozechner/clipboard-win32-x64-msvc': 0.3.9
     optional: true
 
-  '@moonshot-ai/kimi-code@0.28.0':
+  '@moonshot-ai/kimi-code@0.34.0':
     optionalDependencies:
       '@mariozechner/clipboard': 0.3.9
       node-pty: 1.1.0

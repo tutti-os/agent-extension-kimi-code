@@ -12,7 +12,9 @@ and the upstream
 
 ## Runtime contract
 
-- npm package: `@moonshot-ai/kimi-code@0.28.0`
+- npm package: `@moonshot-ai/kimi-code@0.34.0`
+- Local discovery minimum: `>=0.34.0 <1.0.0`; older compatible-looking
+  installations are upgraded into Tutti's isolated Target runtime before use
 - Discovery: `kimi --version`
 - Official installer location: `~/.kimi-code/bin`
 - ACP launch: `kimi acp`
@@ -49,7 +51,7 @@ triggers instead of crowding the command group. Tutti therefore presents three
 distinct groups: Commands, Capabilities (including Browser), and Skills.
 `/status` opens Tutti's provider-neutral status panel, while `/usage` is
 submitted to the Kimi ACP runtime. Kimi Code remains the owner of login and
-provider configuration. Because the pinned 0.28.0 ACP runtime does not publish
+provider configuration. Because the pinned ACP runtime does not publish
 structured Coding Plan account windows, Tutti Desktop also runs a narrow
 account probe in Electron main: API-key providers display `API Usage Billing`
 without projecting the key, while the managed provider uses its request-local

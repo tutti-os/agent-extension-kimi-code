@@ -2,20 +2,30 @@ import { execFileSync } from 'node:child_process';
 import { chmod, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { resolvePythonCommand } from './python-command.mjs';
 const root = path.resolve(import.meta.dirname, '..');
+const pythonCommand = resolvePythonCommand();
+const kimiExecutable = path.join(root, 'node_modules', '.bin', process.platform === 'win32' ? 'kimi.cmd' : 'kimi');
+const kimiCommand = process.platform === 'win32'
+  ? [process.env.ComSpec?.trim() || 'cmd.exe', '/D', '/S', '/C', 'call', kimiExecutable]
+  : [kimiExecutable];
+if (process.platform === 'win32' && !process.env.KIMI_SHELL_PATH?.trim()) {
+  throw new Error('Windows ACP checks require the host-managed KIMI_SHELL_PATH');
+}
 execFileSync(process.execPath, [path.join(root, 'scripts', 'package.mjs')], { stdio: 'inherit' });
 const packageDir = path.join(root, 'build', 'tutti-agent', 'package');
 const manifest = JSON.parse(await readFile(path.join(packageDir, 'tutti.agent.json'), 'utf8'));
 const packageMetadata = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
 if (manifest.schemaVersion !== 'tutti.agent.manifest.v2' || manifest.agentKey !== 'kimi-code' || manifest.version !== packageMetadata.version) throw new Error('invalid manifest identity');
-const expectedInstall = ['install', '--prefix', '${installRoot}', '@moonshot-ai/kimi-code@0.28.0'];
+const pinnedRuntimeVersion = '0.34.0';
+const expectedInstall = ['install', '--prefix', '${installRoot}', `@moonshot-ai/kimi-code@${pinnedRuntimeVersion}`];
 if (manifest.runtime?.kind !== 'standard-acp' || manifest.runtime.install?.runner !== 'npm' || JSON.stringify(manifest.runtime.install.args) !== JSON.stringify(expectedInstall)) throw new Error('Kimi Code runtime must use the pinned, isolated npm contract');
 if (manifest.runtime.launch?.executable !== '${installRoot}/node_modules/.bin/kimi' || JSON.stringify(manifest.runtime.launch.args) !== JSON.stringify(['acp']) || JSON.stringify(manifest.runtime.launch.env) !== JSON.stringify({ KIMI_SHELL_PATH: '${env:TUTTI_MANAGED_POSIX_SHELL}' })) throw new Error('Kimi Code managed launch contract changed');
 const discovery = JSON.parse(await readFile(path.join(packageDir, manifest.profiles.discovery), 'utf8'));
 const candidate = discovery.candidates?.[0];
 if (discovery.candidates?.length !== 1 || JSON.stringify(candidate.binaryNames) !== JSON.stringify(['kimi'])) throw new Error('Kimi Code discovery binary changed');
 if (JSON.stringify(candidate.searchPaths) !== JSON.stringify([{ scope: 'user', path: '.kimi-code/bin' }])) throw new Error('Kimi Code official install search path changed');
-if (JSON.stringify(candidate.version) !== JSON.stringify({ args: ['--version'], constraint: '>=0.28.0 <1.0.0' })) throw new Error('Kimi Code discovery version contract changed');
+if (JSON.stringify(candidate.version) !== JSON.stringify({ args: ['--version'], constraint: `>=${pinnedRuntimeVersion} <1.0.0` })) throw new Error('Kimi Code discovery version contract changed');
 if (JSON.stringify(candidate.launchArgs) !== JSON.stringify(['acp']) || candidate.probe?.kind !== 'acp-initialize' || candidate.probe.timeoutMs !== 15000) throw new Error('Kimi Code discovery must use the bounded ACP probe');
 const capabilities = JSON.parse(await readFile(path.join(packageDir, manifest.profiles.capabilities), 'utf8'));
 const expectedCapabilities = { imageInput: true, audioInput: false, embeddedContext: true, browserUse: true, interrupt: true, resume: true, permissionModes: true, modelSelection: true, commands: true, skills: true };
@@ -56,20 +66,20 @@ if (JSON.stringify(composer.skills) !== JSON.stringify(expectedSkills)) throw ne
 const tools = JSON.parse(await readFile(path.join(packageDir, manifest.profiles.tools), 'utf8'));
 if (tools.tools?.length !== 0) throw new Error('Kimi Code tools must remain generic');
 await verifyKimiAuthenticationContract();
+await verifyKimiAPIKeyAuthenticationContract();
 await verifyKimiSkillDiscovery();
 await rejectExecutables(packageDir);
 
 async function verifyKimiAuthenticationContract() {
   const temporaryRoot = await mkdtemp(path.join(tmpdir(), 'tutti-kimi-auth-'));
   try {
-    const kimiExecutable = path.join(root, 'node_modules', '.bin', 'kimi');
-    const output = execFileSync('python3', [
+    const output = execFileSync(pythonCommand.executable, [...pythonCommand.args,
       path.join(root, 'scripts', 'probe_acp_runtime.py'),
       '--cwd', temporaryRoot,
       '--timeout', '20',
       '--initialize-only',
       '--',
-      kimiExecutable,
+      ...kimiCommand,
       'acp'
     ], {
       encoding: 'utf8',
@@ -84,7 +94,7 @@ async function verifyKimiAuthenticationContract() {
     if (login?.type !== 'terminal') {
       throw new Error('Kimi Code ACP must advertise the terminal login method');
     }
-    const help = execFileSync(kimiExecutable, ['--help'], {
+    const help = execFileSync(kimiCommand[0], [...kimiCommand.slice(1), '--help'], {
       encoding: 'utf8',
       timeout: 10_000,
       env: {
@@ -97,7 +107,53 @@ async function verifyKimiAuthenticationContract() {
       throw new Error('Kimi Code runtime no longer supports the declared interactive entrypoint');
     }
   } finally {
-    await rm(temporaryRoot, { recursive: true, force: true });
+    await rm(temporaryRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+}
+
+async function verifyKimiAPIKeyAuthenticationContract() {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), 'tutti-kimi-api-key-'));
+  try {
+    const workspace = path.join(temporaryRoot, 'workspace');
+    const kimiHome = path.join(temporaryRoot, 'kimi-home');
+    await mkdir(workspace, { recursive: true });
+    await mkdir(kimiHome, { recursive: true });
+    await writeFile(path.join(kimiHome, 'config.toml'), [
+      'default_model = "tutti-api-key-test"',
+      '',
+      '[providers.tutti-api-key-test]',
+      'type = "kimi"',
+      'api_key = "not-used"',
+      'base_url = "http://127.0.0.1:9/v1"',
+      '',
+      '[models.tutti-api-key-test]',
+      'provider = "tutti-api-key-test"',
+      'model = "tutti-api-key-test"',
+      'max_context_size = 32768',
+      ''
+    ].join('\n'));
+    const output = execFileSync(pythonCommand.executable, [...pythonCommand.args,
+      path.join(root, 'scripts', 'probe_acp_runtime.py'),
+      '--cwd', workspace,
+      '--timeout', '20',
+      '--notification-wait', '0',
+      '--',
+      ...kimiCommand,
+      'acp'
+    ], {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        KIMI_CODE_HOME: kimiHome,
+        KIMI_DISABLE_TELEMETRY: '1'
+      }
+    });
+    const result = JSON.parse(output);
+    if (!result.sessionNew?.sessionId) {
+      throw new Error('Kimi Code API-key configuration did not pass ACP session/new');
+    }
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 }
 
@@ -124,12 +180,11 @@ async function verifyKimiSkillDiscovery() {
     const credentialFile = path.join(credentialsDirectory, 'kimi-code.json');
     await writeFile(credentialFile, `${JSON.stringify({ access_token: 'skill-discovery-test-token' })}\n`);
     await chmod(credentialFile, 0o600);
-    const kimiExecutable = path.join(root, 'node_modules', '.bin', 'kimi');
-    const runtimeVersion = execFileSync(kimiExecutable, ['--version'], { encoding: 'utf8' }).trim();
-    if (runtimeVersion !== '0.28.0') {
-      throw new Error('Kimi Code Skill discovery check did not use the pinned 0.28.0 runtime');
+    const runtimeVersion = execFileSync(kimiCommand[0], [...kimiCommand.slice(1), '--version'], { encoding: 'utf8' }).trim();
+    if (runtimeVersion !== pinnedRuntimeVersion) {
+      throw new Error(`Kimi Code Skill discovery check did not use the pinned ${pinnedRuntimeVersion} runtime`);
     }
-    execFileSync('python3', [
+    execFileSync(pythonCommand.executable, [...pythonCommand.args,
       path.join(root, 'scripts', 'probe_acp_runtime.py'),
       '--cwd', workspace,
       '--timeout', '20',
@@ -139,7 +194,7 @@ async function verifyKimiSkillDiscovery() {
       '--expect-command', 'skill:tutti-canonical-test',
       '--summary-only',
       '--',
-      kimiExecutable,
+      ...kimiCommand,
       'acp'
     ], {
       env: {
@@ -153,7 +208,7 @@ async function verifyKimiSkillDiscovery() {
       stdio: 'inherit'
     });
   } finally {
-    await rm(temporaryRoot, { recursive: true, force: true });
+    await rm(temporaryRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 }
 
