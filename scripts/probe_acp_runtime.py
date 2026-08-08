@@ -6,9 +6,10 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import selectors
+import queue
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -78,14 +79,21 @@ class ACPProcess:
             or self.process.stderr is None
         ):
             raise ProbeError("failed to open ACP stdio pipes")
-        os.set_blocking(self.process.stdout.fileno(), False)
-        os.set_blocking(self.process.stderr.fileno(), False)
-        self.selector = selectors.DefaultSelector()
-        self.selector.register(self.process.stdout, selectors.EVENT_READ, "stdout")
-        self.selector.register(self.process.stderr, selectors.EVENT_READ, "stderr")
-        self.stdout_buffer = b""
+        self.output_queue: queue.Queue[tuple[str, bytes]] = queue.Queue()
+        self.stdout_thread = threading.Thread(
+            target=self._read_stream, args=("stdout", self.process.stdout), daemon=True
+        )
+        self.stderr_thread = threading.Thread(
+            target=self._read_stream, args=("stderr", self.process.stderr), daemon=True
+        )
+        self.stdout_thread.start()
+        self.stderr_thread.start()
         self.stderr_buffer = b""
         self.notifications: list[dict[str, Any]] = []
+
+    def _read_stream(self, name: str, stream: Any) -> None:
+        for line in iter(stream.readline, b""):
+            self.output_queue.put((name, line))
 
     def send(self, payload: dict[str, Any]) -> None:
         if self.process.stdin is None:
@@ -105,71 +113,65 @@ class ACPProcess:
                 raise ProbeError(
                     f"ACP runtime exited with {self.process.returncode}: {self.stderr_text()}"
                 )
-            for key, _ in self.selector.select(max(0.0, deadline - time.monotonic())):
-                chunk = os.read(key.fileobj.fileno(), 65536)
-                if not chunk:
-                    continue
-                if key.data == "stderr":
-                    self.stderr_buffer += chunk
-                    continue
-                self.stdout_buffer += chunk
-                while b"\n" in self.stdout_buffer:
-                    line, self.stdout_buffer = self.stdout_buffer.split(b"\n", 1)
-                    if not line.strip():
-                        continue
-                    message = self.parse_message(line)
-                    if message.get("id") == request_id and (
-                        "result" in message or "error" in message
-                    ):
-                        if "error" in message:
-                            raise ProbeError(
-                                f"ACP {method} failed: {json.dumps(message['error'], ensure_ascii=False)}"
-                            )
-                        return message.get("result")
-                    if "method" in message and "id" in message:
-                        self.send(
-                            {
-                                "jsonrpc": "2.0",
-                                "id": message["id"],
-                                "error": {
-                                    "code": -32601,
-                                    "message": "probe client method unsupported",
-                                },
-                            }
-                        )
-                    else:
-                        self.notifications.append(message)
+            try:
+                stream, line = self.output_queue.get(timeout=max(0.0, deadline - time.monotonic()))
+            except queue.Empty:
+                break
+            if stream == "stderr":
+                self.stderr_buffer += line
+                continue
+            if not line.strip():
+                continue
+            message = self.parse_message(line)
+            if message.get("id") == request_id and (
+                "result" in message or "error" in message
+            ):
+                if "error" in message:
+                    raise ProbeError(
+                        f"ACP {method} failed: {json.dumps(message['error'], ensure_ascii=False)}"
+                    )
+                return message.get("result")
+            if "method" in message and "id" in message:
+                self.send(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": message["id"],
+                        "error": {
+                            "code": -32601,
+                            "message": "probe client method unsupported",
+                        },
+                    }
+                )
+            else:
+                self.notifications.append(message)
         raise ProbeError(f"ACP {method} timed out after {self.timeout:g}s")
 
     def drain(self, duration: float) -> None:
         deadline = time.monotonic() + duration
         while time.monotonic() < deadline and self.process.poll() is None:
-            for key, _ in self.selector.select(max(0.0, deadline - time.monotonic())):
-                chunk = os.read(key.fileobj.fileno(), 65536)
-                if not chunk:
-                    continue
-                if key.data == "stderr":
-                    self.stderr_buffer += chunk
-                    continue
-                self.stdout_buffer += chunk
-                while b"\n" in self.stdout_buffer:
-                    line, self.stdout_buffer = self.stdout_buffer.split(b"\n", 1)
-                    if not line.strip():
-                        continue
-                    message = self.parse_message(line)
-                    if "method" in message and "id" in message:
-                        self.send(
-                            {
-                                "jsonrpc": "2.0",
-                                "id": message["id"],
-                                "error": {
-                                    "code": -32601,
-                                    "message": "probe client method unsupported",
-                                },
-                            }
-                        )
-                    else:
-                        self.notifications.append(message)
+            try:
+                stream, line = self.output_queue.get(timeout=max(0.0, deadline - time.monotonic()))
+            except queue.Empty:
+                break
+            if stream == "stderr":
+                self.stderr_buffer += line
+                continue
+            if not line.strip():
+                continue
+            message = self.parse_message(line)
+            if "method" in message and "id" in message:
+                self.send(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": message["id"],
+                        "error": {
+                            "code": -32601,
+                            "message": "probe client method unsupported",
+                        },
+                    }
+                )
+            else:
+                self.notifications.append(message)
 
     @staticmethod
     def parse_message(line: bytes) -> dict[str, Any]:
@@ -187,11 +189,18 @@ class ACPProcess:
         return self.stderr_buffer.decode("utf-8", errors="replace").strip()
 
     def close(self) -> None:
-        self.selector.close()
         if self.process.stdin is not None:
             self.process.stdin.close()
         if self.process.poll() is None:
-            self.process.terminate()
+            if os.name == "nt":
+                subprocess.run(
+                    ["taskkill.exe", "/PID", str(self.process.pid), "/T", "/F"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                )
+            if self.process.poll() is None:
+                self.process.terminate()
             try:
                 self.process.wait(timeout=2)
             except subprocess.TimeoutExpired:

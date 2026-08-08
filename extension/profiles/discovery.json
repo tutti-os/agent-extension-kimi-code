@@ -3,7 +3,7 @@
   "candidates": [{
     "binaryNames": ["kimi"],
     "searchPaths": [{ "scope": "user", "path": ".kimi-code/bin" }],
-    "version": { "args": ["--version"], "constraint": ">=0.28.0 <1.0.0" },
+    "version": { "args": ["--version"], "constraint": ">=0.34.0 <1.0.0" },
     "launchArgs": ["acp"],
     "probe": { "kind": "acp-initialize", "timeoutMs": 15000 }
   }]
