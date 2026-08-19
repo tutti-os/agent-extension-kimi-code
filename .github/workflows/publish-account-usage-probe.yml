@@ -65,7 +65,9 @@ jobs:
           else
             npm publish ./packages/account-usage-probe --access public --provenance
           fi
-          npm access set status=public "${package_name}"
+          if ! npm access set status=public "${package_name}"; then
+            echo "The registry token cannot change package visibility; verifying current public access." >&2
+          fi
           anonymous_npmrc="${RUNNER_TEMP}/anonymous-npmrc"
           printf 'registry=https://registry.npmjs.org/\n' >"${anonymous_npmrc}"
           for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
