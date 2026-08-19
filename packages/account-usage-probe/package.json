@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "description": "Provider-owned Kimi Code account usage probe for Tutti",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tutti-os/agent-extension-kimi-code",
+    "directory": "packages/account-usage-probe"
+  },
   "type": "module",
   "bin": {
     "kimi-code-account-usage": "dist/cli.cjs"
