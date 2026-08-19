@@ -53,7 +53,9 @@ jobs:
           existing_release="${RUNNER_TEMP}/existing-release.json"
           status="$(curl --silent --show-error --location --output "${existing_release}" --write-out '%{http_code}' "${release_url}")"
           case "${status}" in
-            404)
+            403|404)
+              # The private S3 origin returns AccessDenied for a missing key;
+              # the authenticated immutable upload below remains authoritative.
               ;;
             200)
               existing_git_sha="$(node -e '

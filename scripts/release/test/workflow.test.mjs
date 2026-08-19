@@ -33,6 +33,7 @@ test("release workflow protects immutable and mutable objects", async () => {
   assert.match(immutablePreflight, /release\.json/u);
   assert.match(immutablePreflight, /existing_git_sha/u);
   assert.match(immutablePreflight, /GITHUB_SHA/u);
+  assert.match(immutablePreflight, /403\|404/u);
   assert.ok(
     workflow.indexOf("- name: Reject reused immutable version") <
       workflow.indexOf("- name: Install dependencies"),
