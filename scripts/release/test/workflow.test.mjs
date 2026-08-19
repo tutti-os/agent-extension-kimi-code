@@ -76,7 +76,7 @@ test("release workflow protects immutable and mutable objects", async () => {
   assert.match(publicVerification, /--package-dir build\/tutti-agent\/package/u);
 });
 
-test("account usage helper publication uses scoped trusted publishing", async () => {
+test("account usage helper publication uses scoped registry authentication", async () => {
   const workflow = await readFile(
     path.join(
       repositoryRoot,
@@ -86,11 +86,21 @@ test("account usage helper publication uses scoped trusted publishing", async ()
   );
   assert.match(workflow, /id-token: write/u);
   assert.match(workflow, /environment: npm/u);
+  const publishStep = workflow.slice(
+    workflow.indexOf("- name: Publish helper")
+  );
   assert.match(
-    workflow,
+    publishStep,
     /npm publish \.\/packages\/account-usage-probe --access public --provenance/u
   );
-  assert.doesNotMatch(workflow, /NODE_AUTH_TOKEN|NPM_TOKEN/u);
+  assert.match(
+    publishStep,
+    /NODE_AUTH_TOKEN: \$\{\{ secrets\.NPM_TOKEN \}\}/u
+  );
+  assert.doesNotMatch(
+    workflow.slice(0, workflow.indexOf("- name: Publish helper")),
+    /NODE_AUTH_TOKEN|NPM_TOKEN/u
+  );
   assert.doesNotMatch(workflow, /uses:\s+[^\s#]+@v\d+/u);
 });
 
