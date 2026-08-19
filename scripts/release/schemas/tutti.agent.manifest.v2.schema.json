@@ -94,6 +94,7 @@
         "capabilities": { "type": "string" },
         "composer": { "type": "string" },
         "authentication": { "type": "string" },
+        "accountUsage": { "type": "string" },
         "events": { "type": "string" }
       }
     },

@@ -1,13 +1,13 @@
 {
   "name": "@tutti-os/agent-extension-kimi-code",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "private": true,
   "type": "module",
   "engines": {
     "node": ">=24"
   },
   "scripts": {
-    "check": "node scripts/check.mjs && node scripts/run-python.mjs scripts/validate_agent_extension.py build/tutti-agent/package && node --test scripts/release/test/*.test.mjs",
+    "check": "node scripts/check.mjs && node scripts/run-python.mjs scripts/validate_agent_extension.py build/tutti-agent/package && node --test scripts/release/test/*.test.mjs && pnpm --filter @tutti-os/kimi-code-account-usage-probe test",
     "package:tutti-agent": "node scripts/package.mjs"
   },
   "dependencies": {

@@ -1,0 +1,29 @@
+{
+  "name": "@tutti-os/kimi-code-account-usage-probe",
+  "version": "0.1.0",
+  "description": "Provider-owned Kimi Code account usage probe for Tutti",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "kimi-code-account-usage": "dist/cli.cjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "prepack": "node scripts/build.mjs",
+    "test": "node scripts/build.mjs && node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.27.7",
+    "smol-toml": "1.6.1"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

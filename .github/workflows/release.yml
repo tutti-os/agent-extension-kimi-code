@@ -7,7 +7,7 @@ on:
         description: Immutable extension version
         required: true
       min_tutti_version:
-        description: First released Tutti version that reads the authentication-v1 Kimi index
+        description: First released Tutti version that reads the account-usage-v1 Kimi index
         required: true
       withdraw_versions:
         description: Comma-separated historical extension versions to mark withdrawn in versions.json
@@ -21,7 +21,7 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   AGENT_KEY: kimi-code
-  AGENT_METADATA_PATH: agents/kimi-code/authentication-v1
+  AGENT_METADATA_PATH: agents/kimi-code/account-usage-v1
   MIN_TUTTI_VERSION: ${{ inputs.min_tutti_version }}
   SIGNING_KEY_ID: tutti-kimi-code-release-v1
   S3_PREFIX: tutti-agent-releases
@@ -37,6 +37,40 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Reject reused immutable version
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          root_version="$(node -p "require('./package.json').version")"
+          manifest_version="$(node -p "require('./extension/tutti.agent.json').version")"
+          if [[ "${REQUESTED_VERSION}" != "${root_version}" || "${REQUESTED_VERSION}" != "${manifest_version}" ]]; then
+            echo "Requested version ${REQUESTED_VERSION} must match package.json and extension/tutti.agent.json." >&2
+            exit 1
+          fi
+          release_url="${RELEASE_ASSETS_BASE_URL}/agents/${AGENT_KEY}/${REQUESTED_VERSION}/release.json"
+          existing_release="${RUNNER_TEMP}/existing-release.json"
+          status="$(curl --silent --show-error --location --output "${existing_release}" --write-out '%{http_code}' "${release_url}")"
+          case "${status}" in
+            404)
+              ;;
+            200)
+              existing_git_sha="$(node -e '
+                const fs = require("node:fs");
+                const release = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+                process.stdout.write(String(release.gitSha || ""));
+              ' "${existing_release}")"
+              if [[ "${existing_git_sha}" != "${GITHUB_SHA}" ]]; then
+                echo "Immutable version ${REQUESTED_VERSION} is already published from ${existing_git_sha:-an unknown commit}." >&2
+                exit 1
+              fi
+              ;;
+            *)
+              echo "Could not determine whether immutable version ${REQUESTED_VERSION} exists (HTTP ${status})." >&2
+              exit 1
+              ;;
+          esac
 
       - name: Setup pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
@@ -54,6 +88,15 @@ jobs:
 
       - name: Run repository checks
         run: pnpm check
+
+      - name: Verify account usage helper is published
+        run: |
+          package_spec="$(node --input-type=module -e '
+            import fs from "node:fs";
+            const profile = JSON.parse(fs.readFileSync("extension/profiles/account-usage.json", "utf8"));
+            process.stdout.write(profile.runtime.package);
+          ')"
+          npm view "${package_spec}" version --json >/dev/null
 
       - name: Build extension package
         env:

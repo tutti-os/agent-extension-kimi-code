@@ -96,7 +96,7 @@ test("signs and verifies the actual packaged Kimi Code extension", async () => {
     packageDir,
     outputDir: path.join(root, "out"),
     baseUrl: "https://d1x7gb6wqsqmnm.cloudfront.net/tutti-agent-releases",
-    version: "1.0.10",
+    version: "1.0.11",
     signingKeyId: "tutti-kimi-code-release-v1",
     privateKey: keys.privateKey,
     publishedAt: "2026-07-29T00:00:00Z",
@@ -107,6 +107,10 @@ test("signs and verifies the actual packaged Kimi Code extension", async () => {
   assert.deepEqual(result.release.manifest.runtime.launch.env, {
     KIMI_SHELL_PATH: "${env:TUTTI_MANAGED_POSIX_SHELL}",
   });
+  assert.equal(
+    result.release.manifest.profiles.accountUsage,
+    "profiles/account-usage.json"
+  );
   await verifyRelease({
     releaseFile: result.releaseJsonPath,
     artifact: result.artifactPath,
@@ -315,6 +319,38 @@ test("both validators enforce declarative authentication commands", async () => 
   await assertBothValidatorsReject(
     packageDir,
     /command.readyText is supported only for runtime-slash-command/u
+  );
+});
+
+test("both validators constrain the account usage companion", async () => {
+  const packageDir = await repositoryFixture();
+  const accountUsagePath = path.join(
+    packageDir,
+    "profiles",
+    "account-usage.json"
+  );
+  const accountUsage = JSON.parse(await readFile(accountUsagePath, "utf8"));
+
+  accountUsage.runtime.package = "unscoped-probe@1.0.0";
+  await writeFile(
+    accountUsagePath,
+    `${JSON.stringify(accountUsage, null, 2)}\n`
+  );
+  await assertBothValidatorsReject(
+    packageDir,
+    /package must use an exact scoped npm version/u
+  );
+
+  accountUsage.runtime.package =
+    "@tutti-os/kimi-code-account-usage-probe@0.1.0";
+  accountUsage.runtime.script = "/tmp/foreign-probe";
+  await writeFile(
+    accountUsagePath,
+    `${JSON.stringify(accountUsage, null, 2)}\n`
+  );
+  await assertBothValidatorsReject(
+    packageDir,
+    /script must stay under installRoot/u
   );
 });
 

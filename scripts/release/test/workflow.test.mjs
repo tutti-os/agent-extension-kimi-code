@@ -21,7 +21,22 @@ test("release workflow protects immutable and mutable objects", async () => {
   );
   assert.match(
     workflow,
-    /AGENT_METADATA_PATH: agents\/kimi-code\/authentication-v1/u
+    /AGENT_METADATA_PATH: agents\/kimi-code\/account-usage-v1/u
+  );
+  assert.match(workflow, /npm view "\$\{package_spec\}" version/u);
+  const immutablePreflight = workflow.slice(
+    workflow.indexOf("- name: Reject reused immutable version"),
+    workflow.indexOf("- name: Setup pnpm")
+  );
+  assert.match(immutablePreflight, /package\.json/u);
+  assert.match(immutablePreflight, /extension\/tutti\.agent\.json/u);
+  assert.match(immutablePreflight, /release\.json/u);
+  assert.match(immutablePreflight, /existing_git_sha/u);
+  assert.match(immutablePreflight, /GITHUB_SHA/u);
+  assert.ok(
+    workflow.indexOf("- name: Reject reused immutable version") <
+      workflow.indexOf("- name: Install dependencies"),
+    "immutable version reuse must fail before dependency installation and build"
   );
   assert.match(
     workflow,
@@ -59,6 +74,24 @@ test("release workflow protects immutable and mutable objects", async () => {
   assert.match(publicVerification, /verify-tutti-agent-extension-release\.mjs/u);
   assert.match(publicVerification, /--public-key-file/u);
   assert.match(publicVerification, /--package-dir build\/tutti-agent\/package/u);
+});
+
+test("account usage helper publication uses scoped trusted publishing", async () => {
+  const workflow = await readFile(
+    path.join(
+      repositoryRoot,
+      ".github/workflows/publish-account-usage-probe.yml"
+    ),
+    "utf8"
+  );
+  assert.match(workflow, /id-token: write/u);
+  assert.match(workflow, /environment: npm/u);
+  assert.match(
+    workflow,
+    /npm publish \.\/packages\/account-usage-probe --access public --provenance/u
+  );
+  assert.doesNotMatch(workflow, /NODE_AUTH_TOKEN|NPM_TOKEN/u);
+  assert.doesNotMatch(workflow, /uses:\s+[^\s#]+@v\d+/u);
 });
 
 test("AWS bootstrap is repository scoped and contains no credentials", async () => {
