@@ -94,6 +94,9 @@ test("account usage helper publication uses scoped registry authentication", asy
     publishStep,
     /npm publish \.\/packages\/account-usage-probe --access public --provenance/u
   );
+  assert.match(publishStep, /npm access set status=public/u);
+  assert.match(publishStep, /anonymous_npmrc/u);
+  assert.match(publishStep, /already exists; preserving the immutable version/u);
   assert.match(
     publishStep,
     /NODE_AUTH_TOKEN: \$\{\{ secrets\.NPM_TOKEN \}\}/u

@@ -55,4 +55,27 @@ jobs:
       - name: Publish helper
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish ./packages/account-usage-probe --access public --provenance
+        run: |
+          set -euo pipefail
+          package_name="$(node -p "require('./packages/account-usage-probe/package.json').name")"
+          package_version="$(node -p "require('./packages/account-usage-probe/package.json').version")"
+          package_spec="${package_name}@${package_version}"
+          if npm view "${package_spec}" version --json >/dev/null 2>&1; then
+            echo "${package_spec} already exists; preserving the immutable version."
+          else
+            npm publish ./packages/account-usage-probe --access public --provenance
+          fi
+          npm access set status=public "${package_name}"
+          anonymous_npmrc="${RUNNER_TEMP}/anonymous-npmrc"
+          printf 'registry=https://registry.npmjs.org/\n' >"${anonymous_npmrc}"
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            if NPM_CONFIG_USERCONFIG="${anonymous_npmrc}" NODE_AUTH_TOKEN= \
+              npm view "${package_spec}" version --json >/dev/null 2>&1; then
+              exit 0
+            fi
+            if [[ "${attempt}" == 12 ]]; then
+              echo "${package_spec} is not publicly readable after publication." >&2
+              exit 1
+            fi
+            sleep 5
+          done
