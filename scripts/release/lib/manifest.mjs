@@ -69,6 +69,7 @@ const capabilityNames = [
   "audioInput",
   "embeddedContext",
   "browserUse",
+  "computerUse",
   "interrupt",
   "resume",
   "permissionModes",

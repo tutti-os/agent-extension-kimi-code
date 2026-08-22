@@ -73,6 +73,7 @@ CAPABILITY_NAMES = {
     "audioInput",
     "embeddedContext",
     "browserUse",
+    "computerUse",
     "interrupt",
     "resume",
     "permissionModes",

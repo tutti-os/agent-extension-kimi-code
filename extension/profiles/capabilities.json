@@ -5,6 +5,7 @@
     "audioInput": false,
     "embeddedContext": true,
     "browserUse": true,
+    "computerUse": true,
     "interrupt": true,
     "resume": true,
     "permissionModes": true,
