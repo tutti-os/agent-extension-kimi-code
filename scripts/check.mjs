@@ -28,7 +28,7 @@ if (JSON.stringify(candidate.searchPaths) !== JSON.stringify([{ scope: 'user', p
 if (JSON.stringify(candidate.version) !== JSON.stringify({ args: ['--version'], constraint: `>=${pinnedRuntimeVersion} <1.0.0` })) throw new Error('Kimi Code discovery version contract changed');
 if (JSON.stringify(candidate.launchArgs) !== JSON.stringify(['acp']) || candidate.probe?.kind !== 'acp-initialize' || candidate.probe.timeoutMs !== 15000) throw new Error('Kimi Code discovery must use the bounded ACP probe');
 const capabilities = JSON.parse(await readFile(path.join(packageDir, manifest.profiles.capabilities), 'utf8'));
-const expectedCapabilities = { imageInput: true, audioInput: false, embeddedContext: true, browserUse: true, interrupt: true, resume: true, permissionModes: true, modelSelection: true, commands: true, skills: true };
+const expectedCapabilities = { imageInput: true, audioInput: false, embeddedContext: true, browserUse: true, computerUse: true, interrupt: true, resume: true, permissionModes: true, modelSelection: true, commands: true, skills: true };
 if (JSON.stringify(capabilities.declared) !== JSON.stringify(expectedCapabilities)) throw new Error('Kimi Code capabilities changed without runtime evidence');
 const authentication = JSON.parse(await readFile(path.join(packageDir, manifest.profiles.authentication), 'utf8'));
 const expectedAuthentication = {

@@ -41,15 +41,16 @@ remove the fallbacks after the new metadata path has propagated. A fetched but
 invalid, incompatible, or withdrawn higher-priority index must never fall back
 to either older path.
 
-The extension declares Tutti's host-managed browser capability. When the host
-enables browser use, Kimi Code receives the same `/browser` composer capability
-and settings entry as built-in agents.
+The extension declares Tutti's host-managed browser and computer capabilities.
+When the host enables them, Kimi Code receives the same `/browser` and
+`/computer` composer capabilities and settings entries as built-in agents.
 
 The composer profile keeps the slash palette focused on Kimi's six core
 session commands (`compact`, `status`, `usage`, `mcp`, `tasks`, and `help`).
 Other runtime-advertised entries are projected as Skills with their exact slash
 triggers instead of crowding the command group. Tutti therefore presents three
-distinct groups: Commands, Capabilities (including Browser), and Skills.
+distinct groups: Commands, Capabilities (including Browser and Computer), and
+Skills.
 `/status` opens Tutti's provider-neutral status panel, while `/usage` is
 submitted to the Kimi ACP runtime. Kimi Code remains the owner of login and
 provider configuration. Because the pinned 0.34.0 ACP runtime does not publish

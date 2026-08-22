@@ -26,7 +26,12 @@ still gates the effective capability on its own browser availability and
 injects the browser tools at launch; the Kimi ACP runtime does not need to
 advertise a provider-native browser command.
 
-The same release declares an authoritative slash-command projection containing
+Release `1.0.12` also declares the host-managed `computerUse` capability.
+Tutti still gates the effective capability on its computer driver readiness
+and injects the computer tools at launch; the Kimi ACP runtime does not need
+to advertise a provider-native computer command.
+
+Release `1.0.3` declares an authoritative slash-command projection containing
 only `compact`, `status`, `usage`, `mcp`, `tasks`, and `help`. Tutti intersects
 that list with live ACP commands, preserving runtime descriptions. Unlisted
 runtime commands are projected through the typed Skill catalog with their exact
